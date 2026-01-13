@@ -20,7 +20,18 @@
       "Bash(pnpm types:*)",
       "Bash(find:*)",
       "Bash(pnpm --filter @strudel-flow/frontend run:*)",
-      "Bash(pnpm test:*)"
+      "Bash(pnpm test:*)",
+      "mcp__cloudflare-bindings__search_cloudflare_documentation",
+      "Skill(superpowers:using-git-worktrees)",
+      "Bash(test:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git worktree add:*)",
+      "Bash(zsh:*)",
+      "Skill(superpowers:writing-plans)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Bash(python3:*)"
     ]
   },
   "disabledMcpjsonServers": [
