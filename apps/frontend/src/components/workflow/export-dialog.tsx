@@ -26,7 +26,7 @@ interface ExportDialogProps {
 export function ExportDialog({
 	open,
 	onOpenChange,
-	projectId: _projectId, // Will be used when implementing actual export
+	projectId: _projectId, // eslint-disable-line @typescript-eslint/no-unused-vars -- Will be used for the actual export API call
 	duration,
 	onExport,
 	isExporting = false,
