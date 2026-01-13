@@ -47,8 +47,11 @@ export function useAudioExport() {
 					throw new Error("No audio track found in capture stream. Please ensure you select a tab with audio.");
 				}
 
-				// Create a MediaRecorder with the captured audio stream
-				const mediaRecorder = new MediaRecorder(displayMedia, {
+				// Create a stream with only the audio track
+				const audioStream = new MediaStream([audioTrack]);
+
+				// Create a MediaRecorder with the audio-only stream
+				const mediaRecorder = new MediaRecorder(audioStream, {
 					mimeType: MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
 						? "audio/webm;codecs=opus"
 						: "audio/webm",
