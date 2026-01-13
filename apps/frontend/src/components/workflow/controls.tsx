@@ -69,6 +69,7 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
     shareUrl: string;
     audioUrl: string;
   } | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   // Audio export hooks
@@ -84,6 +85,7 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
   const handleExport = async (overwrite: boolean) => {
     setIsExporting(true);
     setExportResult(null);
+    setExportError(null);
 
     try {
       // Start recording with Strudel's audio context
@@ -110,11 +112,13 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
         },
         onError: (error) => {
           console.error("Recording failed:", error);
+          setExportError(error instanceof Error ? error.message : "Recording failed. Please try again.");
           setIsExporting(false);
         },
       });
     } catch (error) {
       console.error("Export failed:", error);
+      setExportError(error instanceof Error ? error.message : "Export failed. Please try again.");
       setIsExporting(false);
     }
   };

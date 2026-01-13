@@ -21,6 +21,7 @@ interface ExportDialogProps {
 		shareUrl: string;
 		audioUrl: string;
 	} | null;
+	exportError?: string | null;
 }
 
 export function ExportDialog({
@@ -31,6 +32,7 @@ export function ExportDialog({
 	onExport,
 	isExporting = false,
 	exportResult = null,
+	exportError = null,
 }: ExportDialogProps) {
 	const [overwrite, setOverwrite] = useState(false);
 
@@ -84,6 +86,14 @@ export function ExportDialog({
 							<span className="ml-2 text-sm text-muted-foreground">
 								Recording and exporting...
 							</span>
+						</div>
+					)}
+
+					{exportError && (
+						<div className="space-y-3">
+							<div className="flex items-center gap-2 text-sm text-red-600">
+								✗ Export failed: {exportError}
+							</div>
 						</div>
 					)}
 

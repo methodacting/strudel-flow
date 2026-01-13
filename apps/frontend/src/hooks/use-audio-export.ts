@@ -26,9 +26,12 @@ export function useAudioExport() {
 				setIsRecording(true);
 
 				// Request screen/audio capture from the user
-				// We'll capture the current tab's audio
+				// Note: Most browsers require video to be enabled for getDisplayMedia
+				// We capture the current tab with audio
 				const displayMedia = await navigator.mediaDevices.getDisplayMedia({
-					video: false, // We only need audio
+					video: {
+						displaySurface: "browser", // Capture browser/tab only
+					},
 					audio: {
 						suppressLocalAudioPlayback: false, // Let the user hear it while recording
 						echoCancellation: false,
