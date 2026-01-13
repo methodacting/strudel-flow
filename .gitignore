@@ -5,12 +5,23 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+.pnpm-store
+.pnpm-store/**
+pnpm-store
+pnpm-store/**
 lerna-debug.log*
 
 node_modules
 dist
 dist-ssr
 *.local
+coverage
+coverage/**
+.coverage
+.coverage/**
+
+# Turborepo
+.turbo
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +33,21 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+
+# START Ruler Generated Files
+/.codex/config.json
+/.codex/config.json.bak
+/.codex/config.toml
+/.codex/config.toml.bak
+/.cursor/mcp.json
+/.cursor/mcp.json.bak
+/.mcp.json
+/.mcp.json.bak
+/AGENTS.md
+/AGENTS.md.bak
+/CLAUDE.md
+/CLAUDE.md.bak
+/opencode.json
+/opencode.json.bak
+# END Ruler Generated Files

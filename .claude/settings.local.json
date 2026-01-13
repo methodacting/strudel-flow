@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(superpowers:brainstorming)",
+      "Bash(pnpm add drizzle-orm better-auth yjs)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm list:*)",
+      "Bash(pnpm drizzle-kit generate:*)",
+      "Bash(pnpm --dir /Users/sean/code/apps/strudel-flow/packages/db drizzle-kit generate:*)",
+      "Bash(pnpm db:migrations:generate:*)",
+      "Bash(pnpm db:migrate:local)",
+      "Bash(ls:*)",
+      "Bash(rm:*)",
+      "Bash(pnpm --filter @strudel-flow/backend drizzle-kit generate:*)",
+      "Bash(./node_modules/.bin/drizzle-kit generate:*)",
+      "Bash(pnpm --filter @strudel-flow/db generate:*)",
+      "Bash(pnpm --filter @strudel-flow/backend db:migrate:local:*)",
+      "Bash(http://localhost:8788/auth/sign-in/anonymous)",
+      "Bash(pnpm --filter @strudel-flow/db build:*)"
+    ]
+  },
+  "disabledMcpjsonServers": [
+    "web-search-prime",
+    "web-reader",
+    "fetch",
+    "context7",
+    "memory",
+    "zai-mcp-server",
+    "sub-agents"
+  ]
+}

@@ -1,0 +1,98 @@
+import { useEffect, useState } from "react";
+import ProjectList from "./components/project-list";
+import CreateProjectDialog from "./components/create-project-dialog";
+import UserMenu from "./components/user-menu";
+import WorkflowEditor from "./components/editor";
+import { apiClient } from "./lib/api-client";
+import type { Project as ProjectType } from "./components/project-list";
+
+export default function App() {
+	const [projects, setProjects] = useState<ProjectType[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [selectedProject, setSelectedProject] = useState<ProjectType | null>(null);
+	const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+	useEffect(() => {
+		loadProjects();
+	}, []);
+
+	const loadProjects = async () => {
+		try {
+			setLoading(true);
+			const data = await apiClient.getProjects();
+			setProjects(data);
+		} catch (error) {
+			console.error("Failed to load projects:", error);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const handleCreateProject = async (name: string) => {
+		try {
+			const project = await apiClient.createProject(name);
+			setProjects([...projects, project]);
+		} catch (error) {
+			console.error("Failed to create project:", error);
+			throw error;
+		}
+	};
+
+	const handleSelectProject = (project: ProjectType) => {
+		setSelectedProject(project);
+		// Initialize Yjs sync and load the editor
+		window.location.hash = `#project/${project.id}`;
+	};
+
+	if (selectedProject) {
+		// Render editor with project loaded
+		return (
+			<div className="flex flex-col h-screen">
+				<header className="border-b px-6 py-4 flex items-center justify-between">
+					<div className="flex items-center gap-4">
+						<h1 className="text-xl font-bold">{selectedProject.name}</h1>
+						<button
+							onClick={() => setSelectedProject(null)}
+							className="text-sm text-muted-foreground hover:text-foreground"
+						>
+							← Back to projects
+						</button>
+					</div>
+					<UserMenu />
+				</header>
+
+				<div className="flex-1">
+					<WorkflowEditor />
+				</div>
+			</div>
+		);
+	}
+
+	return (
+		<div className="min-h-screen bg-background">
+			<header className="border-b px-6 py-4 flex items-center justify-between">
+				<div className="flex items-center gap-2">
+					<h1 className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
+						Strudel Flow
+					</h1>
+				</div>
+				<UserMenu />
+			</header>
+
+			<main className="container mx-auto py-8">
+				<ProjectList
+					projects={projects}
+					loading={loading}
+					onCreate={() => setCreateDialogOpen(true)}
+					onSelect={handleSelectProject}
+				/>
+			</main>
+
+			<CreateProjectDialog
+				open={createDialogOpen}
+				onOpenChange={setCreateDialogOpen}
+				onCreate={handleCreateProject}
+			/>
+		</div>
+	);
+}

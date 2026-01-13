@@ -1,0 +1,36 @@
+{
+  "name": "@strudel-flow/backend",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy --minify",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "db:schema:dump": "wrangler d1 exports DB --local --output=../../packages/db/drizzle/schema.sql",
+    "clean": "rm -rf node_modules"
+  },
+  "dependencies": {
+    "@strudel-flow/db": "workspace:*",
+    "@strudel-flow/types": "workspace:*",
+    "@types/node": "^24.0.1",
+    "better-auth": "^1.4.10",
+    "drizzle-orm": "^0.45.1",
+    "hono": "^4.11.3",
+    "y-durableobjects": "^1.0.5",
+    "@hono/zod-validator": "^0.4.3",
+    "nanoid": "^5.0.9",
+    "y-indexeddb": "^9.0.12",
+    "y-protocols": "^1.0.6",
+    "yjs": "^13.6.29",
+    "zod": "^4.3.5"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260109.0",
+    "drizzle-kit": "^0.31.8",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.58.0"
+  }
+}

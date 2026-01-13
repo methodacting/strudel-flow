@@ -1,0 +1,58 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "strudel-flow-backend",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-09-27",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "../frontend/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/auth/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "strudel-flow-db",
+      "database_id": "bd8a50a4-aa75-4e1f-82e9-218b84001c1f",
+      "migrations_dir": "./migrations"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "Y_DURABLE_OBJECTS",
+        "class_name": "YDurableObjects"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": [
+        "YDurableObjects"
+      ]
+    }
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "BETTER_AUTH_SECRET": "dev-secret-change-in-production",
+    "BETTER_AUTH_URL": "https://strudel-flow-backend.snilan.workers.dev",
+    "FRONTEND_URL": "",
+    "GOOGLE_CLIENT_ID": "your-google-client-id",
+    "GOOGLE_CLIENT_SECRET": "your-google-client-secret",
+    "GITHUB_CLIENT_ID": "your-github-client-id",
+    "GITHUB_CLIENT_SECRET": "your-github-client-secret"
+  },
+  "dev": {
+    "port": 8788
+  }
+}
