@@ -8,6 +8,7 @@ import { ProjectEditor, ProjectManager } from "./app";
 import { useSessionContext } from "./contexts/session-context";
 import { SessionProvider } from "./contexts/session-provider";
 import { Button } from "./components/ui/button";
+import { SharedAudioPage } from "./components/shared-audio-page";
 
 const rootRoute = createRootRoute({
 	component: function RootLayout() {
@@ -176,7 +177,13 @@ const joinRoute = createRoute({
 	},
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, projectRoute, joinRoute]);
+const audioShareRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/audio/$exportId",
+	component: SharedAudioPage,
+});
+
+const routeTree = rootRoute.addChildren([indexRoute, projectRoute, joinRoute, audioShareRoute]);
 
 export const router = createRouter({
 	routeTree,

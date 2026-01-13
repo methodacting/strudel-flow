@@ -17,4 +17,16 @@ export default defineConfig(() => ({
     process.env.VERCEL_ENV === 'production'
       ? 'https://flow-machine-xyflow.vercel.app/'
       : '/',
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8788',
+        changeOrigin: true,
+      },
+      '/auth': {
+        target: 'http://localhost:8788',
+        changeOrigin: true,
+      },
+    },
+  },
 }));

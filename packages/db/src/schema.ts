@@ -216,6 +216,32 @@ export const projectSnapshot = sqliteTable("project_snapshot", {
     .$defaultFn(() => new Date()),
 });
 
+export const projectExport = sqliteTable(
+  "project_export",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    fileKey: text("file_key").notNull().unique(),
+    format: text("format").notNull().default("mp3"),
+    durationSeconds: integer("duration_seconds").notNull(),
+    isLatest: integer("is_latest", { mode: "boolean" })
+      .default(false)
+      .notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    projectIdIdx: index("project_export_project_id_idx").on(table.projectId),
+    latestIdx: index("project_export_latest_idx").on(
+      table.projectId,
+      table.isLatest,
+    ),
+  }),
+);
+
 // Relations
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
@@ -287,3 +313,5 @@ export type ProjectInvite = typeof projectInvite.$inferSelect;
 export type NewProjectInvite = typeof projectInvite.$inferInsert;
 export type ProjectSnapshot = typeof projectSnapshot.$inferSelect;
 export type NewProjectSnapshot = typeof projectSnapshot.$inferInsert;
+export type ProjectExport = typeof projectExport.$inferSelect;
+export type NewProjectExport = typeof projectExport.$inferInsert;

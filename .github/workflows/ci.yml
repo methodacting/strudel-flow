@@ -88,8 +88,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build frontend assets
-        run: pnpm -C apps/frontend build
+      - name: Build all packages
+        run: pnpm build
 
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v3

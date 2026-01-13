@@ -24,6 +24,13 @@
       "migrations_dir": "./migrations"
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "AUDIO_EXPORTS",
+      "bucket_name": "strudel-flow-audio-exports",
+      "preview_bucket_name": "strudel-flow-audio-exports-preview"
+    }
+  ],
   "durable_objects": {
     "bindings": [
       {

@@ -1,7 +1,7 @@
 import { ZoomSlider } from '@/components/zoom-slider';
 import { Panel } from '@xyflow/react';
 import { useState } from 'react';
-import { NotebookText, Timer, Play, Pause, Menu, X } from 'lucide-react';
+import { NotebookText, Timer, Play, Pause, Menu, X, Download } from 'lucide-react';
 import { PatternPanel } from '@/components/pattern-panel';
 import { useGlobalPlayback } from '@/hooks/use-global-playback';
 import { CPM } from '@/components/cpm';
@@ -9,6 +9,9 @@ import { ShareUrlPopover } from '@/components/share-url-popover';
 import { PresetPopover } from '@/components/preset-popover';
 import { AppInfoPopover } from '@/components/app-info-popover';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { ExportDialog } from '@/components/workflow/export-dialog';
+import { useAudioExport } from '@/hooks/use-audio-export';
+import { useCreateExportMutation } from '@/hooks/api/exports';
 
 function PlayPauseButton() {
   const { isGloballyPaused, toggleGlobalPlayback } = useGlobalPlayback();
@@ -60,7 +63,87 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
   const [isPatternPanelVisible, setPatternPanelVisible] = useState(false);
   const [isCpmPanelVisible, setCpmPanelVisible] = useState(false);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportResult, setExportResult] = useState<{
+    shareUrl: string;
+    audioUrl: string;
+    exportId: string;
+  } | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const isMobile = useIsMobile();
+
+  // Audio export hooks
+  const { isRecording, startRecording } = useAudioExport();
+  const createExport = useCreateExportMutation();
+
+  // Calculate loop duration based on CPM (cycles per minute) and BPC (beats per cycle)
+  // Default: 120 CPM / 4 BPC = 30 beats per minute = 2 seconds per cycle
+  // Multiply by 4 to record 4 loops (8 seconds) for a longer sample
+  const cpm = 120; // This should come from the actual CPM value
+  const bpc = 4;   // This should come from the actual BPC value
+  const numLoops = 4; // Record multiple loops for a longer sample
+  const loopDuration = (60 / cpm) * bpc * numLoops;
+
+  const handleExport = async (overwrite: boolean) => {
+    setIsExporting(true);
+    setExportResult(null);
+    setExportError(null);
+
+    try {
+      // Start recording with Strudel's audio context
+      await startRecording({
+        duration: loopDuration,
+        onProgress: (remaining) => {
+          console.log(`Recording time remaining: ${remaining.toFixed(1)}s`);
+        },
+        onComplete: async (blob) => {
+          // Upload the recorded audio to the backend
+          const result = await createExport.mutateAsync({
+            projectId,
+            audioBlob: blob,
+            overwrite,
+            duration: loopDuration,
+          });
+
+          // Update UI with the result
+          setExportResult({
+            shareUrl: result.shareUrl,
+            audioUrl: result.audioUrl,
+            exportId: result.exportId,
+          });
+          setIsExporting(false);
+        },
+        onError: (error) => {
+          console.error("Recording failed:", error);
+          setExportError(error instanceof Error ? error.message : "Recording failed. Please try again.");
+          setIsExporting(false);
+        },
+      });
+    } catch (error) {
+      console.error("Export failed:", error);
+      setExportError(error instanceof Error ? error.message : "Export failed. Please try again.");
+      setIsExporting(false);
+    }
+  };
+
+  const handleResetExport = () => {
+    setExportResult(null);
+    setExportError(null);
+  };
+
+  function ExportButton() {
+    return (
+      <button
+        className="p-2 rounded bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground transition"
+        onClick={() => setExportDialogOpen(true)}
+        disabled={isExporting || isRecording}
+        title="Export audio"
+      >
+        <Download className="w-5 h-5" />
+      </button>
+    );
+  }
 
   if (isMobile) {
     return (
@@ -94,6 +177,8 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
 
               <ShareUrlPopover projectId={projectId} />
 
+              <ExportButton />
+
               <AppInfoPopover />
             </div>
           )}
@@ -104,6 +189,18 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
         <Panel position="bottom-right" className="flex flex-col gap-4">
           <PatternPanel isVisible={isPatternPanelVisible} />
         </Panel>
+
+        <ExportDialog
+          open={exportDialogOpen}
+          onOpenChange={setExportDialogOpen}
+          projectId={projectId}
+          duration={loopDuration}
+          onExport={handleExport}
+          onReset={handleResetExport}
+          isExporting={isExporting}
+          exportResult={exportResult}
+          exportError={exportError}
+        />
       </>
     );
   }
@@ -125,6 +222,8 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
 
         <ShareUrlPopover projectId={projectId} />
 
+        <ExportButton />
+
         <AppInfoPopover />
 
         {isCpmPanelVisible && <CPM />}
@@ -133,6 +232,18 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
       <Panel position="bottom-right" className="flex flex-col gap-4">
         <PatternPanel isVisible={isPatternPanelVisible} />
       </Panel>
+
+      <ExportDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        projectId={projectId}
+        duration={loopDuration}
+        onExport={handleExport}
+        onReset={handleResetExport}
+        isExporting={isExporting}
+        exportResult={exportResult}
+        exportError={exportError}
+      />
     </>
   );
 }
