@@ -23,6 +23,17 @@ export function useAudioExport() {
 	const streamDestinationRef = useRef<MediaStreamDestination | null>(null);
 	const [isRecording, setIsRecording] = useState(false);
 
+	/**
+	 * Record audio from Strudel's Web Audio output
+	 * This requires access to Strudel's audio context and master output node
+	 *
+	 * NOTE: The current implementation requires Strudel to expose its master output node.
+	 * This is a known limitation - we need to either:
+	 * 1. Modify Strudel to expose its master output, or
+	 * 2. Use Web Audio API's `audioWorklet` to intercept all audio output
+	 *
+	 * For now, this is a placeholder that shows the structure.
+	 */
 	const startRecording = useCallback(
 		async (
 			audioContext: AudioContext,
@@ -32,12 +43,13 @@ export function useAudioExport() {
 			try {
 				setIsRecording(true);
 
-				// Create stream destination
+				// Create stream destination for recording
 				const streamDestination =
 					audioContext.createMediaStreamDestination();
 				streamDestinationRef.current = streamDestination;
 
-				// Connect source to stream destination
+				// Connect source to both stream destination (for recording)
+				// and the original destination (speakers) - so user can hear it
 				sourceNode.connect(streamDestination);
 
 				// Create media recorder
