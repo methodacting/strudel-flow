@@ -26,7 +26,11 @@ export const useProjectsQuery = (enabled: boolean) =>
 			return data.projects;
 		},
 		onSuccess: async (projects) => {
-			await indexedDB.projects.setMany(projects);
+			try {
+				await indexedDB.projects.setMany(projects);
+			} catch (error) {
+				console.warn("Failed to persist projects to IndexedDB", error);
+			}
 		},
 	});
 

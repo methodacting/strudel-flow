@@ -3,7 +3,7 @@ import type { IDBPDatabase } from "idb";
 import type { Project } from "../types/project";
 
 const DB_NAME = "strudel-flow";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_PROJECTS = "projects";
 
 export type StoredProject = Project;

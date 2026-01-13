@@ -55,12 +55,6 @@ export default function ProjectList({
 
 	useEffect(() => {
 		let mounted = true;
-		if (!sessionReady) {
-			setCachedProjects(null);
-			return () => {
-				mounted = false;
-			};
-		}
 
 		void (async () => {
 			const localProjects = await indexedDB.projects.getAll();
@@ -72,12 +66,17 @@ export default function ProjectList({
 		return () => {
 			mounted = false;
 		};
-	}, [sessionReady]);
+	}, []);
 
 	// Load projects with TanStack Query
 	const { data: projects, isLoading, isFetching, error } =
 		useProjectsQuery(sessionReady);
 
+	useEffect(() => {
+		if (projects && projects.length > 0) {
+			setCachedProjects(projects);
+		}
+	}, [projects]);
 	// Update project mutation
 	const updateProject = useUpdateProjectMutation();
 
@@ -90,7 +89,7 @@ export default function ProjectList({
 	const projectsList = projects ?? cachedProjects ?? [];
 	const shouldShowSkeleton =
 		(cachedProjects === null || cachedProjects.length === 0) &&
-		(isLoading || isFetching) &&
+		(!sessionReady || isLoading || isFetching) &&
 		!projects;
 
 	const filteredAndSortedProjects = (() => {
