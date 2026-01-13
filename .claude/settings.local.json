@@ -16,7 +16,11 @@
       "Bash(pnpm --filter @strudel-flow/db generate:*)",
       "Bash(pnpm --filter @strudel-flow/backend db:migrate:local:*)",
       "Bash(http://localhost:8788/auth/sign-in/anonymous)",
-      "Bash(pnpm --filter @strudel-flow/db build:*)"
+      "Bash(pnpm --filter @strudel-flow/db build:*)",
+      "Bash(pnpm types:*)",
+      "Bash(find:*)",
+      "Bash(pnpm --filter @strudel-flow/frontend run:*)",
+      "Bash(pnpm test:*)"
     ]
   },
   "disabledMcpjsonServers": [

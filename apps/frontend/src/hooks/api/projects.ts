@@ -1,14 +1,16 @@
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { honoClient } from "@/lib/hono-client";
 import { ApiStatusError, getErrorMessage } from "@/lib/api-helpers";
 import { queryKeys } from "@/lib/query-keys";
 import { indexedDB } from "@/lib/indexeddb";
+import type { Project } from "@/types/project";
 
 const withSignal = (signal?: AbortSignal) =>
 	signal ? { init: { signal } } : undefined;
 
-export const useProjectsQuery = (enabled: boolean) =>
-	useQuery({
+export const useProjectsQuery = (enabled: boolean) => {
+	const query = useQuery<Project[], ApiStatusError>({
 		queryKey: queryKeys.projects,
 		enabled,
 		queryFn: async ({ signal }) => {
@@ -25,17 +27,25 @@ export const useProjectsQuery = (enabled: boolean) =>
 			const data = await response.json();
 			return data.projects;
 		},
-		onSuccess: async (projects) => {
+	});
+
+	useEffect(() => {
+		const projects = query.data;
+		if (!projects) return;
+		void (async () => {
 			try {
 				await indexedDB.projects.setMany(projects);
 			} catch (error) {
 				console.warn("Failed to persist projects to IndexedDB", error);
 			}
-		},
-	});
+		})();
+	}, [query.data]);
+
+	return query;
+};
 
 export const useProjectQuery = (projectId: string, enabled: boolean) =>
-	useQuery({
+	useQuery<Project, ApiStatusError>({
 		queryKey: queryKeys.project(projectId),
 		enabled,
 		queryFn: async ({ signal }) => {
@@ -73,7 +83,7 @@ export const useCreateProjectMutation = () => {
 			const data = await response.json();
 			return data.project;
 		},
-		onSuccess: async (project) => {
+		onSuccess: async (project: Project) => {
 			await indexedDB.projects.add(project);
 			queryClient.invalidateQueries({ queryKey: queryKeys.projects });
 		},
@@ -98,7 +108,7 @@ export const useUpdateProjectMutation = () => {
 			const data = await response.json();
 			return data.project;
 		},
-		onSuccess: async (project) => {
+		onSuccess: async (project: Project) => {
 			await indexedDB.projects.update(project);
 			queryClient.invalidateQueries({ queryKey: queryKeys.projects });
 		},

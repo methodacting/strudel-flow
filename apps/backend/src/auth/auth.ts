@@ -4,7 +4,7 @@ import { anonymous, organization } from "better-auth/plugins";
 
 import { createDb } from "../db";
 import * as schema from "@strudel-flow/db/schema";
-import type { CloudflareBindings } from "../worker-configuration.d";
+import type { CloudflareBindings } from "../types/bindings";
 
 // Create a fresh auth instance for each request (required for Cloudflare Workers)
 export function getAuth(
@@ -18,7 +18,7 @@ export function getAuth(
 		| "GITHUB_CLIENT_SECRET"
 		| "FRONTEND_URL"
 	>,
-) {
+): ReturnType<typeof betterAuth> {
 	const db = createDb(d1);
 	const baseOrigin = new URL(env.BETTER_AUTH_URL).origin;
 	const trustedOrigins = [

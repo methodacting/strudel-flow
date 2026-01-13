@@ -3,9 +3,19 @@
   "version": "0.0.0",
   "type": "module",
   "private": true,
+  "types": "dist/index.d.ts",
+  "exports": {
+    "./app-type": {
+      "types": "./dist/app-type.d.ts"
+    },
+    ".": {
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
+    "build": "tsc -p tsconfig.build.json",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",

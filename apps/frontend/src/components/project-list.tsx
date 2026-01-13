@@ -16,6 +16,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import ProjectCard from "./project-card";
+import ProjectCardSkeleton from "./project-card-skeleton";
 import RenameProjectDialog from "./rename-project-dialog";
 import DeleteProjectDialog from "./delete-project-dialog";
 import type { Project } from "@/types/project";

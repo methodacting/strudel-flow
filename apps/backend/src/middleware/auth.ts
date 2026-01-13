@@ -23,8 +23,13 @@ export async function authMiddleware(
 
 	console.log("[auth-middleware] Session found for user:", session.user?.id);
 	// Attach session to context
+	const user = {
+		...session.user,
+		image: session.user.image ?? null,
+		isAnonymous: session.user.isAnonymous ?? null,
+	};
 	c.set("session", session);
-	c.set("user", session.user);
+	c.set("user", user);
 
 	await next();
 }
