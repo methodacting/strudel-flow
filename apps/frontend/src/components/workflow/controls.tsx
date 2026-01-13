@@ -11,6 +11,7 @@ import { AppInfoPopover } from '@/components/app-info-popover';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ExportDialog } from '@/components/workflow/export-dialog';
 import { useAudioExport } from '@/hooks/use-audio-export';
+import { useCreateExportMutation } from '@/hooks/api/exports';
 
 function PlayPauseButton() {
   const { isGloballyPaused, toggleGlobalPlayback } = useGlobalPlayback();
@@ -71,24 +72,49 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
   const isMobile = useIsMobile();
 
   // Audio export hooks
-  const { isRecording } = useAudioExport();
-  // Note: useCreateExportMutation will be used in Task 9 when implementing actual recording
+  const { isRecording, startRecording } = useAudioExport();
+  const createExport = useCreateExportMutation();
 
-  // TODO: Task 9 - Connect to Strudel's audio context
-  // For now, we'll implement the structure but the actual recording
-  // requires access to Strudel's Web Audio API context
+  // Calculate loop duration based on CPM (cycles per minute) and BPC (beats per cycle)
+  // Default: 120 CPM / 4 BPC = 30 beats per minute = 2 seconds per cycle
+  const cpm = 120; // This should come from the actual CPM value
+  const bpc = 4;   // This should come from the actual BPC value
+  const loopDuration = (60 / cpm) * bpc;
+
   const handleExport = async (overwrite: boolean) => {
     setIsExporting(true);
     setExportResult(null);
 
     try {
-      // This will be implemented in Task 9 when we connect to Strudel's audio
-      // For now, this is a placeholder that logs the intent
-      console.log('Export requested with overwrite:', overwrite);
-      console.log('Recording will be implemented in Task 9');
-      setIsExporting(false);
+      // Start recording with Strudel's audio context
+      await startRecording({
+        duration: loopDuration,
+        onProgress: (remaining) => {
+          console.log(`Recording time remaining: ${remaining.toFixed(1)}s`);
+        },
+        onComplete: async (blob) => {
+          // Upload the recorded audio to the backend
+          const result = await createExport.mutateAsync({
+            projectId,
+            audioBlob: blob,
+            overwrite,
+            duration: loopDuration,
+          });
+
+          // Update UI with the result
+          setExportResult({
+            shareUrl: result.shareUrl,
+            audioUrl: result.audioUrl,
+          });
+          setIsExporting(false);
+        },
+        onError: (error) => {
+          console.error("Recording failed:", error);
+          setIsExporting(false);
+        },
+      });
     } catch (error) {
-      console.error('Export failed:', error);
+      console.error("Export failed:", error);
       setIsExporting(false);
     }
   };
@@ -155,7 +181,7 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
           open={exportDialogOpen}
           onOpenChange={setExportDialogOpen}
           projectId={projectId}
-          duration={4} // TODO: Get actual loop duration
+          duration={loopDuration}
           onExport={handleExport}
           isExporting={isExporting}
           exportResult={exportResult}
@@ -191,6 +217,16 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
       <Panel position="bottom-right" className="flex flex-col gap-4">
         <PatternPanel isVisible={isPatternPanelVisible} />
       </Panel>
+
+      <ExportDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        projectId={projectId}
+        duration={loopDuration}
+        onExport={handleExport}
+        isExporting={isExporting}
+        exportResult={exportResult}
+      />
     </>
   );
 }

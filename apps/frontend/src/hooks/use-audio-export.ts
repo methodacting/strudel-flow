@@ -1,16 +1,5 @@
 import { useCallback, useRef, useState } from "react";
 
-// MediaStreamDestination is a Web Audio API type
-interface MediaStreamDestination extends AudioNode {
-	stream: MediaStream;
-}
-
-declare global {
-	interface AudioContext {
-		createMediaStreamDestination(): MediaStreamDestination;
-	}
-}
-
 export interface AudioExportOptions {
 	duration: number; // in seconds
 	onProgress?: (remaining: number) => void;
@@ -18,43 +7,49 @@ export interface AudioExportOptions {
 	onError?: (error: Error) => void;
 }
 
+/**
+ * Record audio from the current tab using Screen Capture API
+ *
+ * This is the most reliable way to capture Strudel's audio output.
+ * It uses getDisplayMedia() to capture the tab's audio stream.
+ *
+ * Note: This will prompt the user to select which tab/audio to capture.
+ * They should select "This Tab" or the current browser tab.
+ */
 export function useAudioExport() {
 	const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-	const streamDestinationRef = useRef<MediaStreamDestination | null>(null);
 	const [isRecording, setIsRecording] = useState(false);
 
-	/**
-	 * Record audio from Strudel's Web Audio output
-	 * This requires access to Strudel's audio context and master output node
-	 *
-	 * NOTE: The current implementation requires Strudel to expose its master output node.
-	 * This is a known limitation - we need to either:
-	 * 1. Modify Strudel to expose its master output, or
-	 * 2. Use Web Audio API's `audioWorklet` to intercept all audio output
-	 *
-	 * For now, this is a placeholder that shows the structure.
-	 */
 	const startRecording = useCallback(
-		async (
-			audioContext: AudioContext,
-			sourceNode: AudioNode,
-			options: AudioExportOptions,
-		) => {
+		async (options: AudioExportOptions) => {
 			try {
 				setIsRecording(true);
 
-				// Create stream destination for recording
-				const streamDestination =
-					audioContext.createMediaStreamDestination();
-				streamDestinationRef.current = streamDestination;
+				// Request screen/audio capture from the user
+				// We'll capture the current tab's audio
+				const displayMedia = await navigator.mediaDevices.getDisplayMedia({
+					video: false, // We only need audio
+					audio: {
+						suppressLocalAudioPlayback: false, // Let the user hear it while recording
+						echoCancellation: false,
+						noiseSuppression: false,
+						autoGainControl: false,
+					},
+					preferCurrentTab: true, // Hint to capture this tab
+				} as DisplayMediaStreamOptions);
 
-				// Connect source to both stream destination (for recording)
-				// and the original destination (speakers) - so user can hear it
-				sourceNode.connect(streamDestination);
+				// Get the audio track from the stream
+				const audioTrack = displayMedia.getAudioTracks()[0];
+				if (!audioTrack) {
+					throw new Error("No audio track found in capture stream. Please ensure you select a tab with audio.");
+				}
 
-				// Create media recorder
-				const mediaRecorder = new MediaRecorder(streamDestination.stream, {
-					mimeType: "audio/webm",
+				// Create a MediaRecorder with the captured audio stream
+				const mediaRecorder = new MediaRecorder(displayMedia, {
+					mimeType: MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+						? "audio/webm;codecs=opus"
+						: "audio/webm",
+					audioBitsPerSecond: 320000, // High quality audio
 				});
 				mediaRecorderRef.current = mediaRecorder;
 
@@ -68,15 +63,16 @@ export function useAudioExport() {
 
 				mediaRecorder.onstop = () => {
 					const blob = new Blob(chunks, { type: "audio/webm" });
+
+					// Stop all tracks to release the capture
+					displayMedia.getTracks().forEach((track) => track.stop());
+
 					options.onComplete?.(blob);
 					setIsRecording(false);
-
-					// Cleanup
-					sourceNode.disconnect(streamDestination);
 				};
 
 				// Start recording
-				mediaRecorder.start();
+				mediaRecorder.start(100); // Collect data every 100ms
 
 				// Progress updates
 				const startTime = Date.now();
@@ -98,8 +94,14 @@ export function useAudioExport() {
 						mediaRecorder.stop();
 					}
 				}, options.duration * 1000);
+
 			} catch (error) {
-				options.onError?.(error as Error);
+				// User might have cancelled the screen capture dialog
+				if (error instanceof Error && error.name === "NotAllowedError") {
+					options.onError?.(new Error("Screen capture permission denied. Please allow audio capture to export."));
+				} else {
+					options.onError?.(error as Error);
+				}
 				setIsRecording(false);
 			}
 		},

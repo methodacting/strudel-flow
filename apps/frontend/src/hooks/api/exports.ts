@@ -1,18 +1,31 @@
 import { useMutation } from "@tanstack/react-query";
 import { ApiStatusError } from "@/lib/api-helpers";
 
+/**
+ * Response from the export API endpoint
+ */
+export interface CreateExportResponse {
+	audioUrl: string;
+	shareUrl: string;
+	exportId: string;
+	duration: number;
+	createdAt: string;
+}
+
+export interface CreateExportVariables {
+	projectId: string;
+	audioBlob: Blob;
+	overwrite: boolean;
+	duration: number;
+}
+
 export const useCreateExportMutation = () =>
-	useMutation({
+	useMutation<CreateExportResponse, Error, CreateExportVariables>({
 		mutationFn: async ({
 			projectId,
 			audioBlob,
 			overwrite,
 			duration,
-		}: {
-			projectId: string;
-			audioBlob: Blob;
-			overwrite: boolean;
-			duration: number;
 		}) => {
 			const formData = new FormData();
 			formData.append("audio", audioBlob);
@@ -27,7 +40,7 @@ export const useCreateExportMutation = () =>
 			});
 
 			if (!response.ok) {
-				const errorData = await response.json() as { error?: string };
+				const errorData = (await response.json()) as { error?: string };
 				throw new ApiStatusError(
 					errorData.error || "Failed to create export",
 					response.status,
