@@ -5,6 +5,7 @@ import { projectRouter } from "./routes/projects";
 import { realtimeRouter } from "./routes/realtime";
 import { cleanupRouter } from "./routes/cleanup";
 import { yjsRouter, YDurableObjects } from "./routes/yjs";
+import { audioRouter } from "./routes/audio";
 import type { AppBindings, AppVariables } from "./types/hono";
 
 const allowedOrigins = [
@@ -45,7 +46,8 @@ const app = new Hono<{ Bindings: AppBindings; Variables: AppVariables }>()
 	.route("/api", projectRouter)
 	.route("/api", realtimeRouter)
 	.route("/api", cleanupRouter)
-	.route("/api", yjsRouter);
+	.route("/api", yjsRouter)
+	.route("/api", audioRouter);
 
 export type AppType = typeof app;
 
