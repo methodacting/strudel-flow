@@ -1,6 +1,11 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, ArrowUpDown, Plus, FolderOpen } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+	useProjectsQuery,
+	useUpdateProjectMutation,
+	useDeleteProjectMutation,
+	useCreateProjectMutation,
+} from "@/hooks/api/projects";
+import { Search, ArrowUpDown, Plus, FolderOpen, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,11 +16,10 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import ProjectCard from "./project-card";
-import ProjectCardSkeleton from "./project-card-skeleton";
 import RenameProjectDialog from "./rename-project-dialog";
 import DeleteProjectDialog from "./delete-project-dialog";
-import { apiClient } from "@/lib/api-client";
 import type { Project } from "@/types/project";
+import { indexedDB } from "@/lib/indexeddb";
 
 type SortOption = "name-asc" | "name-desc" | "newest" | "oldest" | "updated";
 
@@ -47,43 +51,47 @@ export default function ProjectList({
 	const [renameDialogOpen, setRenameDialogOpen] = useState(false);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-	const queryClient = useQueryClient();
+	const [cachedProjects, setCachedProjects] = useState<Project[] | null>(null);
+
+	useEffect(() => {
+		let mounted = true;
+		if (!sessionReady) {
+			setCachedProjects(null);
+			return () => {
+				mounted = false;
+			};
+		}
+
+		void (async () => {
+			const localProjects = await indexedDB.projects.getAll();
+			if (mounted) {
+				setCachedProjects(localProjects);
+			}
+		})();
+
+		return () => {
+			mounted = false;
+		};
+	}, [sessionReady]);
 
 	// Load projects with TanStack Query
-	const { data: projects, isLoading, isFetching, error } = useQuery({
-		queryKey: ["projects"],
-		queryFn: () => apiClient.getProjects(),
-		enabled: sessionReady,
-	});
-
-	const isInitialLoading = isLoading || (!projects && isFetching);
+	const { data: projects, isLoading, isFetching, error } =
+		useProjectsQuery(sessionReady);
 
 	// Update project mutation
-	const updateProject = useMutation({
-		mutationFn: ({ id, name }: { id: string; name: string }) =>
-			apiClient.updateProject(id, { name }),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["projects"] });
-		},
-	});
+	const updateProject = useUpdateProjectMutation();
 
 	// Delete project mutation
-	const deleteProject = useMutation({
-		mutationFn: (id: string) => apiClient.deleteProject(id),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["projects"] });
-		},
-	});
+	const deleteProject = useDeleteProjectMutation();
 
 	// Create project mutation
-	const createProject = useMutation({
-		mutationFn: (name: string) => apiClient.createProject(name),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["projects"] });
-		},
-	});
+	const createProject = useCreateProjectMutation();
 
-	const projectsList = projects || [];
+	const projectsList = projects ?? cachedProjects ?? [];
+	const shouldShowSkeleton =
+		(cachedProjects === null || cachedProjects.length === 0) &&
+		(isLoading || isFetching) &&
+		!projects;
 
 	const filteredAndSortedProjects = (() => {
 		let filtered = [...projectsList];
@@ -139,7 +147,9 @@ export default function ProjectList({
 
 	const handleDuplicate = async () => {
 		if (!selectedProject) return;
-		await createProject.mutateAsync(`${selectedProject.name} (Copy)`);
+		await createProject.mutateAsync({
+			name: `${selectedProject.name} (Copy)`,
+		});
 	};
 
 	const openRenameDialog = (project: Project) => {
@@ -176,6 +186,9 @@ export default function ProjectList({
 				<div className="flex items-center gap-2">
 					<FolderOpen className="w-5 h-5 text-primary" />
 					<h2 className="text-2xl font-bold">My Projects</h2>
+					{cachedProjects && cachedProjects.length > 0 && isFetching && (
+						<RefreshCw className="h-4 w-4 animate-subtle-spin text-muted-foreground/70" />
+					)}
 				</div>
 				<Button onClick={onCreate}>
 					<Plus className="w-4 h-4 mr-2" />
@@ -216,13 +229,13 @@ export default function ProjectList({
 				</div>
 			</div>
 
-			{isInitialLoading ? (
+			{shouldShowSkeleton ? (
 				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 					{Array.from({ length: 6 }).map((_, i) => (
 						<ProjectCardSkeleton key={i} />
 					))}
 				</div>
-			) : filteredAndSortedProjects.length === 0 ? (
+			) : !isLoading && !isFetching && filteredAndSortedProjects.length === 0 ? (
 				<div className="border-2 border-dashed border-border rounded-lg p-12">
 					<div className="text-center space-y-3">
 						<FolderOpen className="w-12 h-12 mx-auto text-muted-foreground" />

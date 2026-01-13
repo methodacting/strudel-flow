@@ -6,9 +6,9 @@ import UserMenu from "./components/user-menu";
 import WorkflowEditor from "./components/editor";
 import SidebarLayout from "./components/layouts/sidebar-layout";
 import type { Project } from "./types/project";
-import { apiClient } from "./lib/api-client";
 import { Button } from "./components/ui/button";
 import { Link2 } from "lucide-react";
+import { useCreateInviteMutation } from "./hooks/api/projects";
 
 export function ProjectManager({ sessionReady }: { sessionReady: boolean }) {
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -63,6 +63,7 @@ export function ProjectEditor({
 	const [inviteLoading, setInviteLoading] = useState(false);
 	const [inviteVisible, setInviteVisible] = useState(false);
 	const inviteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const createInvite = useCreateInviteMutation();
 
 	useEffect(() => {
 		return () => {
@@ -101,7 +102,9 @@ export function ProjectEditor({
 								clearTimeout(inviteTimeoutRef.current);
 							}
 							try {
-								const { inviteUrl } = await apiClient.createInvite(projectId);
+								const { inviteUrl } = await createInvite.mutateAsync({
+									projectId,
+								});
 								await navigator.clipboard.writeText(inviteUrl);
 								setInviteStatus("Invite link copied");
 								setInviteVisible(true);

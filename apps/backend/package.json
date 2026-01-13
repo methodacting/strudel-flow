@@ -10,7 +10,8 @@
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
     "db:schema:dump": "wrangler d1 exports DB --local --output=../../packages/db/drizzle/schema.sql",
-    "clean": "rm -rf node_modules"
+    "clean": "rm -rf node_modules",
+    "tail": "wrangler tail"
   },
   "dependencies": {
     "@strudel-flow/db": "workspace:*",

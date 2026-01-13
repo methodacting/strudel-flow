@@ -1,8 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
+import { useSessionQuery } from "@/hooks/api/session";
 import { signInWithGoogle, signInWithGithub, signOut } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import type { Session } from "@/lib/auth";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -30,12 +28,7 @@ function AvatarSkeleton() {
 }
 
 export default function UserMenu({ sessionReady }: { sessionReady: boolean }) {
-	const { data: sessionData, isLoading } = useQuery<Session | null>({
-		queryKey: ["session"],
-		queryFn: () => apiClient.getSession(),
-		refetchInterval: 60 * 1000,
-		enabled: sessionReady,
-	});
+	const { data: sessionData, isLoading } = useSessionQuery(sessionReady);
 
 	const user = sessionData?.user;
 

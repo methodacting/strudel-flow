@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
 	Dialog,
@@ -11,8 +10,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { apiClient } from "@/lib/api-client";
 import { Plus } from "lucide-react";
+import { useCreateProjectMutation } from "@/hooks/api/projects";
 
 export interface CreateProjectDialogProps {
 	open: boolean;
@@ -26,30 +25,9 @@ export default function CreateProjectDialog({
 	const [name, setName] = useState("");
 	const [creating, setCreating] = useState(false);
 	const [error, setError] = useState("");
-	const queryClient = useQueryClient();
 	const navigate = useNavigate();
 
-	const createProject = useMutation({
-		mutationFn: (name: string) => apiClient.createProject(name),
-		onMutate: () => setCreating(true),
-		onSuccess: (project) => {
-			setName("");
-			setError("");
-			setCreating(false);
-			onOpenChange(false);
-			queryClient.invalidateQueries({
-				queryKey: ["projects"],
-			});
-			navigate({
-				to: "/project/$projectId",
-				params: { projectId: project.id },
-			});
-		},
-		onError: (err) => {
-			setError(err instanceof Error ? err.message : "Failed to create project");
-			setCreating(false);
-		},
-	});
+	const createProject = useCreateProjectMutation();
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -65,7 +43,21 @@ export default function CreateProjectDialog({
 			return;
 		}
 
-		createProject.mutate(name.trim());
+		setCreating(true);
+		try {
+			const project = await createProject.mutateAsync({ name: name.trim() });
+			setName("");
+			setError("");
+			setCreating(false);
+			onOpenChange(false);
+			navigate({
+				to: "/project/$projectId",
+				params: { projectId: project.id },
+			});
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Failed to create project");
+			setCreating(false);
+		}
 	};
 
 	return (

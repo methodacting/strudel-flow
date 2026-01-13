@@ -1,9 +1,9 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { useAppStore } from "@/store/app-context";
 import { createYjsClient, YjsClient } from "@/lib/yjs-client";
 import { createAwarenessManager } from "@/lib/awareness";
 import type { AwarenessState } from "@/lib/awareness";
-import { apiClient } from "@/lib/api-client";
+import { useRealtimeUrlQuery } from "@/hooks/api/projects";
 
 export interface UseYjsSyncOptions {
 	projectId: string;
@@ -18,11 +18,11 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 	const clientRef = useRef<YjsClient | null>(null);
 	const awarenessManagerRef = useRef<ReturnType<typeof createAwarenessManager> | null>(null);
 	const syncToYjsRef = useRef(false);
-	const [websocketUrl, setWebsocketUrl] = useState<string | null>(null);
-
-	useEffect(() => {
-		setWebsocketUrl(null);
-	}, [projectId]);
+	const { data: realtimeData } = useRealtimeUrlQuery(
+		projectId,
+		Boolean(projectId),
+	);
+	const websocketUrl = realtimeData?.wsUrl ?? null;
 
 	const nodes = useAppStore((state) => state.nodes);
 	const edges = useAppStore((state) => state.edges);
@@ -33,18 +33,8 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 	useEffect(() => {
 		if (!projectId) return;
 
-		let cancelled = false;
-
 		const setupClient = async () => {
 			if (!websocketUrl) {
-				try {
-					const { wsUrl } = await apiClient.getRealtimeUrl(projectId);
-					if (!cancelled) {
-						setWebsocketUrl(wsUrl);
-					}
-				} catch (error) {
-					console.error("Failed to load realtime URL", error);
-				}
 				return;
 			}
 
@@ -105,7 +95,6 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 		})();
 
 		return () => {
-			cancelled = true;
 			cleanup?.();
 		};
 	}, [projectId, token, userId, userName, websocketUrl, setNodes, setEdges]);

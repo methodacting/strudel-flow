@@ -1,11 +1,12 @@
+/* eslint-disable react-refresh/only-export-components */
 import { Outlet, RouterProvider, createRootRoute, createRoute, createRouter, useParams, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { ApiStatusError } from "@/lib/api-helpers";
+import { useProjectQuery, useJoinProjectMutation } from "@/hooks/api/projects";
 import { useEffect, useState } from "react";
 import { useAnonymousSession } from "./hooks/use-anonymous-session";
-import { AccountSync } from "./components/account-sync";
 import { ProjectEditor, ProjectManager } from "./app";
-import { apiClient, ApiError } from "./lib/api-client";
-import { SessionProvider, useSessionContext } from "./contexts/session-context";
+import { useSessionContext } from "./contexts/session-context";
+import { SessionProvider } from "./contexts/session-provider";
 import { Button } from "./components/ui/button";
 
 const rootRoute = createRootRoute({
@@ -14,7 +15,6 @@ const rootRoute = createRootRoute({
 
 		return (
 			<SessionProvider sessionReady={sessionReady}>
-				<AccountSync sessionReady={sessionReady} />
 				<Outlet />
 			</SessionProvider>
 		);
@@ -37,11 +37,10 @@ const projectRoute = createRoute({
 		const { sessionReady } = useSessionContext();
 		const { projectId } = useParams({ from: "/project/$projectId" });
 
-		const { data: project, isLoading } = useQuery({
-			queryKey: ["project", projectId],
-			queryFn: () => apiClient.getProject(projectId),
-			enabled: sessionReady,
-		});
+		const { data: project, isLoading } = useProjectQuery(
+			projectId,
+			sessionReady,
+		);
 
 		if (!sessionReady || isLoading) {
 			return null;
@@ -75,15 +74,20 @@ const joinRoute = createRoute({
 			title: string;
 			description: string;
 		} | null>(null);
+		const joinProject = useJoinProjectMutation();
 		const navigate = useNavigate();
 
 		useEffect(() => {
 			let cancelled = false;
+			const controller = new AbortController();
 			if (!sessionReady) return;
 
 			void (async () => {
 				try {
-					const project = await apiClient.joinProject(token);
+					const project = await joinProject.mutateAsync({
+						token,
+						signal: controller.signal,
+					});
 					if (!cancelled) {
 						navigate({
 							to: "/project/$projectId",
@@ -93,7 +97,7 @@ const joinRoute = createRoute({
 					}
 				} catch (err) {
 					if (!cancelled) {
-						if (err instanceof ApiError) {
+						if (err instanceof ApiStatusError) {
 							if (err.status === 410) {
 								setError({
 									title: "Invite expired",
@@ -131,8 +135,9 @@ const joinRoute = createRoute({
 
 			return () => {
 				cancelled = true;
+				controller.abort();
 			};
-		}, [sessionReady, token]);
+		}, [joinProject, navigate, sessionReady, token]);
 
 		return (
 			<div className="flex min-h-screen items-center justify-center bg-background px-6">

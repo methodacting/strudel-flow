@@ -134,7 +134,7 @@ export const projectRouter = new Hono<{
 	const service = new ProjectService(c.env);
 	const access = await service.checkAccess(projectId, user.id);
 
-	if (!access.allowed || access.role !== "owner") {
+	if (!access.allowed || access.role === "viewer") {
 		return c.json({ error: "Forbidden" }, 403);
 	}
 

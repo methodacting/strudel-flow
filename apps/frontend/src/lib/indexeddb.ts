@@ -6,11 +6,7 @@ const DB_NAME = "strudel-flow";
 const DB_VERSION = 1;
 const STORE_PROJECTS = "projects";
 
-export interface StoredProject extends Project {
-	isAnonymous: boolean;
-	syncedAt?: Date;
-	anonymousId?: string;
-}
+export type StoredProject = Project;
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
@@ -68,15 +64,14 @@ export const indexedDB = {
 			if (!db) return;
 			await db.clear(STORE_PROJECTS);
 		},
-
-		async getAnonymousProjects(): Promise<StoredProject[]> {
-			const all = await this.getAll();
-			return all.filter((p) => p.isAnonymous);
-		},
-
-		async getPublicProjects(): Promise<StoredProject[]> {
-			const all = await this.getAll();
-			return all.filter((p) => !p.isAnonymous);
+		async setMany(projects: StoredProject[]): Promise<void> {
+			const db = await getDB();
+			if (!db) return;
+			const tx = db.transaction(STORE_PROJECTS, "readwrite");
+			for (const project of projects) {
+				await tx.store.put(project);
+			}
+			await tx.done;
 		},
 	},
 };

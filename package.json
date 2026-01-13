@@ -19,7 +19,8 @@
     "db:schema:dump": "cd packages/db && drizzle-kit generate",
     "db:push:local": "cd apps/backend && wrangler d1 execute strudel-flow-db --local --file=../packages/db/drizzle/schema.sql",
     "db:migrations:generate": "pnpm --filter @strudel-flow/db exec drizzle-kit generate",
-    "deploy": "pnpm -C apps/frontend build && pnpm -C apps/backend run deploy"
+    "deploy": "pnpm -C apps/frontend build && pnpm -C apps/backend run deploy",
+    "tail": "pnpm -C apps/backend run tail"
   },
   "devDependencies": {
     "turbo": "^2.4.4",

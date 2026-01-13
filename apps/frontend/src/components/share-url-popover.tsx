@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Check, Copy } from 'lucide-react';
 import {
   Popover,
@@ -7,13 +7,49 @@ import {
 } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useCreateInviteMutation } from '@/hooks/api/projects';
 export function ShareUrlPopover({ projectId }: { projectId: string }) {
   const [isCopied, setIsCopied] = useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const createInvite = useCreateInviteMutation();
+
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+
+    const fetchInvite = async () => {
+      if (!isPopoverOpen || inviteUrl) return;
+      setError(null);
+      try {
+        const data = await createInvite.mutateAsync({
+          projectId,
+          role: 'viewer',
+          signal: controller.signal,
+        });
+        if (!cancelled) {
+          setInviteUrl(data.inviteUrl);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to create link.');
+        }
+      }
+    };
+
+    void fetchInvite();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [createInvite, inviteUrl, isPopoverOpen, projectId]);
 
   const handleCopyUrl = async () => {
     try {
-      await navigator.clipboard.writeText(displayUrl);
+      if (!inviteUrl) return;
+      await navigator.clipboard.writeText(inviteUrl);
       setIsCopied(true);
 
       // Reset the copied state after 2 seconds
@@ -25,7 +61,8 @@ export function ShareUrlPopover({ projectId }: { projectId: string }) {
     }
   };
 
-  const displayUrl = `${window.location.origin}/project/${projectId}`;
+  const displayUrl =
+    inviteUrl ?? `${window.location.origin}/project/${projectId}`;
 
   return (
     <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
@@ -42,7 +79,7 @@ export function ShareUrlPopover({ projectId }: { projectId: string }) {
           <div>
             <h4 className="font-medium text-sm mb-2">Share Project</h4>
             <p className="text-xs text-muted-foreground mb-3">
-              Copy this link to open the project.
+              Share a view-only link to this project.
             </p>
           </div>
 
@@ -57,8 +94,11 @@ export function ShareUrlPopover({ projectId }: { projectId: string }) {
               size="sm"
               onClick={handleCopyUrl}
               className={`shrink-0 ${isCopied ? 'bg-primary' : ''}`}
+              disabled={!inviteUrl || createInvite.isPending}
             >
-              {isCopied ? (
+              {createInvite.isPending ? (
+                'Generating...'
+              ) : isCopied ? (
                 <>
                   <Check className="w-4 h-4 mr-1" />
                   Copied!
@@ -71,6 +111,24 @@ export function ShareUrlPopover({ projectId }: { projectId: string }) {
               )}
             </Button>
           </div>
+
+          {error && (
+            <p className="text-xs text-destructive">{error}</p>
+          )}
+
+          {inviteUrl && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="px-0 text-xs text-muted-foreground hover:text-foreground"
+              onClick={async () => {
+                setInviteUrl(null);
+                setIsCopied(false);
+              }}
+            >
+              Generate a new link
+            </Button>
+          )}
         </div>
       </PopoverContent>
     </Popover>

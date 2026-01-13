@@ -24,6 +24,7 @@
   "include": ["src"],
   "references": [
     { "path": "../../packages/types" },
+    { "path": "../backend" },
     { "path": "./tsconfig.node.json" }
   ]
 }
