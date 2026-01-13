@@ -1,6 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { honoClient } from "@/lib/hono-client";
-import { ApiStatusError, getErrorMessage } from "@/lib/api-helpers";
+import { ApiStatusError } from "@/lib/api-helpers";
 
 export const useCreateExportMutation = () =>
 	useMutation({
@@ -28,9 +27,9 @@ export const useCreateExportMutation = () =>
 			});
 
 			if (!response.ok) {
-				const error = await response.json();
+				const errorData = await response.json() as { error?: string };
 				throw new ApiStatusError(
-					error.error || "Failed to create export",
+					errorData.error || "Failed to create export",
 					response.status,
 				);
 			}

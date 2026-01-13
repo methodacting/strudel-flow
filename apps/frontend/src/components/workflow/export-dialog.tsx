@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 interface ExportDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	projectId: string;
+	projectId: string; // Will be used for the actual export API call
 	duration: number;
 	onExport: (overwrite: boolean) => Promise<void>;
 	isExporting?: boolean;
@@ -26,7 +26,7 @@ interface ExportDialogProps {
 export function ExportDialog({
 	open,
 	onOpenChange,
-	projectId,
+	projectId: _projectId, // Will be used when implementing actual export
 	duration,
 	onExport,
 	isExporting = false,

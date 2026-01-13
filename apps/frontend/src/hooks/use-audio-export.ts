@@ -1,5 +1,16 @@
 import { useCallback, useRef, useState } from "react";
 
+// MediaStreamDestination is a Web Audio API type
+interface MediaStreamDestination extends AudioNode {
+	stream: MediaStream;
+}
+
+declare global {
+	interface AudioContext {
+		createMediaStreamDestination(): MediaStreamDestination;
+	}
+}
+
 export interface AudioExportOptions {
 	duration: number; // in seconds
 	onProgress?: (remaining: number) => void;
