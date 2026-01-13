@@ -9,6 +9,9 @@ export interface CloudflareBindings {
 	// Database bindings
 	DB: D1Database;
 
+	// R2 storage bindings
+	AUDIO_EXPORTS: R2Bucket;
+
 	// Durable Object bindings
 	Y_DURABLE_OBJECTS: DurableObjectNamespace<YDurableObjects>;
 
