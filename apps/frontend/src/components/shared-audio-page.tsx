@@ -11,6 +11,9 @@ export function SharedAudioPage() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [audioUrl, setAudioUrl] = useState<string | null>(null);
+	const [duration, setDuration] = useState(0);
+	const [currentTime, setCurrentTime] = useState(0);
+	const [levels, setLevels] = useState<number[]>([]);
 
 	useEffect(() => {
 		const fetchAudio = async () => {
@@ -26,11 +29,34 @@ export function SharedAudioPage() {
 					throw new Error("Failed to load audio");
 				}
 
-				// Create a blob URL for the audio
 				const blob = await response.blob();
 				const url = URL.createObjectURL(blob);
 				audioUrlRef.current = url;
 				setAudioUrl(url);
+				const arrayBuffer = await blob.arrayBuffer();
+				const ctx = new AudioContext();
+				const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+				const channelData =
+					audioBuffer.numberOfChannels > 0
+						? audioBuffer.getChannelData(0)
+						: new Float32Array();
+				const bars = 64;
+				const samplesPerBar = Math.max(
+					1,
+					Math.floor(channelData.length / bars),
+				);
+				const peaks = Array.from({ length: bars }, (_, index) => {
+					const start = index * samplesPerBar;
+					const end = Math.min(channelData.length, start + samplesPerBar);
+					let peak = 0;
+					for (let i = start; i < end; i += 1) {
+						const value = Math.abs(channelData[i] ?? 0);
+						if (value > peak) peak = value;
+					}
+					return Math.min(1, peak * 3);
+				});
+				setLevels(peaks);
+				ctx.close().catch(() => undefined);
 			} catch (err) {
 				setError(err instanceof Error ? err.message : "Failed to load audio");
 			} finally {
@@ -70,6 +96,13 @@ export function SharedAudioPage() {
 		}
 	};
 
+	const formatTime = (time: number) => {
+		if (!Number.isFinite(time)) return "0:00";
+		const minutes = Math.floor(time / 60);
+		const seconds = Math.floor(time % 60);
+		return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+	};
+
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-6">
 			<div className="w-full max-w-lg">
@@ -92,9 +125,6 @@ export function SharedAudioPage() {
 								<span className="text-3xl">🎵</span>
 							</div>
 							<h1 className="text-2xl font-bold mb-2">Shared Audio</h1>
-							<p className="text-sm text-muted-foreground">
-								Export ID: {exportId}
-							</p>
 						</div>
 					</div>
 
@@ -126,6 +156,12 @@ export function SharedAudioPage() {
 									onPlay={() => setIsPlaying(true)}
 									onPause={() => setIsPlaying(false)}
 									onEnded={() => setIsPlaying(false)}
+									onLoadedMetadata={() => {
+										setDuration(audioRef.current?.duration ?? 0);
+									}}
+									onTimeUpdate={() => {
+										setCurrentTime(audioRef.current?.currentTime ?? 0);
+									}}
 								/>
 
 								{/* Play/Pause button */}
@@ -141,6 +177,54 @@ export function SharedAudioPage() {
 											<Play className="h-8 w-8 ml-1" />
 										)}
 									</Button>
+								</div>
+
+								<div className="rounded-md border bg-muted/30 p-3 relative overflow-hidden">
+									<div
+										className={`absolute top-2 bottom-2 w-0.5 bg-primary/80 shadow-[0_0_8px_rgba(59,130,246,0.6)] transition-[left] duration-150 ${
+											isPlaying ? "animate-pulse" : ""
+										}`}
+										style={{
+											left: duration
+												? `${Math.min(100, (currentTime / duration) * 100)}%`
+												: "0%",
+										}}
+									/>
+									<div className="flex h-16 items-end gap-1">
+										{(levels.length ? levels : new Array(64).fill(0.05)).map(
+											(level, index) => (
+												<div
+													key={`bar-${index}`}
+													className="flex-1 rounded-sm bg-primary/70 transition-[height] duration-150"
+													style={{
+														height: `${Math.max(6, Math.round(level * 100))}%`,
+													}}
+												/>
+											),
+										)}
+									</div>
+								</div>
+
+								<div className="space-y-2">
+									<input
+										type="range"
+										min={0}
+										max={duration || 0}
+										step={0.01}
+										value={Math.min(currentTime, duration || 0)}
+										onChange={(event) => {
+											const nextTime = Number(event.target.value);
+											if (audioRef.current) {
+												audioRef.current.currentTime = nextTime;
+											}
+											setCurrentTime(nextTime);
+										}}
+										className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
+									/>
+									<div className="flex justify-between text-xs text-muted-foreground">
+										<span>{formatTime(currentTime)}</span>
+										<span>{formatTime(duration)}</span>
+									</div>
 								</div>
 
 								{/* Action buttons */}

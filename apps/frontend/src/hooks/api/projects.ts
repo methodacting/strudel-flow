@@ -13,6 +13,8 @@ export const useProjectsQuery = (enabled: boolean) => {
 	const query = useQuery<Project[], ApiStatusError>({
 		queryKey: queryKeys.projects,
 		enabled,
+		refetchOnMount: "always",
+		refetchOnWindowFocus: true,
 		queryFn: async ({ signal }) => {
 			const response = await honoClient.api.projects.$get(
 				{},

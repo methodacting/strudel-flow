@@ -18,7 +18,7 @@ interface ExportDialogProps {
 	cpm: number; // Cycles per minute
 	bpc: number; // Beats per cycle
 	numLoops?: number; // Number of loops to record
-	onExport: (overwrite: boolean, numLoops: number) => Promise<void>;
+	onExport: (numLoops: number) => Promise<void>;
 	onReset?: () => void; // Callback to reset export result
 	isExporting?: boolean;
 	exportResult?: {
@@ -28,6 +28,7 @@ interface ExportDialogProps {
 	} | null;
 	exportError?: string | null;
 	isPaused?: boolean; // Whether playback is currently paused
+	levels?: number[];
 }
 
 export function ExportDialog({
@@ -44,8 +45,8 @@ export function ExportDialog({
 	exportResult = null,
 	exportError = null,
 	isPaused = false,
+	levels = [],
 }: ExportDialogProps) {
-	const [overwrite, setOverwrite] = useState(false);
 	const [copied, setCopied] = useState(false);
 	const [loops, setLoops] = useState(numLoops);
 
@@ -61,7 +62,7 @@ export function ExportDialog({
 	}, [open, isPaused]);
 
 	const handleExport = async () => {
-		await onExport(overwrite, loops);
+		await onExport(loops);
 	};
 
 	const handleCopyLink = async () => {
@@ -94,7 +95,6 @@ export function ExportDialog({
 
 	const handleClose = () => {
 		onOpenChange(false);
-		setOverwrite(false);
 		// Reset export state when closing
 		onReset?.();
 	};
@@ -105,7 +105,7 @@ export function ExportDialog({
 				<DialogHeader>
 					<DialogTitle>Export Audio</DialogTitle>
 					<DialogDescription>
-						Export your composition as a WAV file ({calculatedDuration.toFixed(1)}s)
+						Export your composition as a WAV file.
 					</DialogDescription>
 				</DialogHeader>
 
@@ -128,7 +128,7 @@ export function ExportDialog({
 									<input
 										type="range"
 										min="1"
-										max="16"
+										max="8"
 										value={loops}
 										onChange={(e) => setLoops(Number(e.target.value))}
 										className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
@@ -136,34 +136,36 @@ export function ExportDialog({
 									<span className="text-sm font-medium w-8 text-center">{loops}</span>
 								</div>
 								<p className="text-xs text-muted-foreground">
-									Recording duration: {calculatedDuration.toFixed(1)}s ({loops} loop{loops !== 1 ? 's' : ''})
+									{loops} loop{loops !== 1 ? 's' : ''} • {calculatedDuration.toFixed(1)}s total
 								</p>
 							</div>
 
-							<div className="flex items-center space-x-2">
-								<input
-									type="checkbox"
-									id="overwrite"
-									checked={overwrite}
-									onChange={(e) => setOverwrite(e.target.checked)}
-									className="w-4 h-4 rounded border-gray-300"
-								/>
-								<label
-									htmlFor="overwrite"
-									className="text-sm font-medium leading-none cursor-pointer"
-								>
-									Overwrite previous export
-								</label>
-							</div>
 						</>
 					)}
 
 					{isExporting && (
-						<div className="flex items-center justify-center py-8">
-							<Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-							<span className="ml-2 text-sm text-muted-foreground">
-								Recording and exporting...
-							</span>
+						<div className="space-y-4 py-4">
+							<div className="flex items-center justify-center">
+								<Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+								<span className="ml-2 text-sm text-muted-foreground">
+									Recording and exporting...
+								</span>
+							</div>
+							<div className="rounded-md border bg-muted/30 p-3">
+								<div className="flex h-16 items-end gap-1">
+									{(levels.length ? levels : new Array(32).fill(0.05)).map(
+										(level, index) => (
+											<div
+												key={`bar-${index}`}
+												className="flex-1 rounded-sm bg-primary/70 transition-[height] duration-150"
+												style={{
+													height: `${Math.max(6, Math.round(level * 100))}%`,
+												}}
+											/>
+										),
+									)}
+								</div>
+							</div>
 						</div>
 					)}
 

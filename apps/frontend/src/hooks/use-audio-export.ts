@@ -27,8 +27,11 @@ export interface AudioExportOptions {
 export function useAudioExport() {
 	const recorderRef = useRef<AudioRecorder | null>(null);
 	const restoreTapRef = useRef<(() => void) | null>(null);
+	const analyserRef = useRef<AnalyserNode | null>(null);
+	const rafRef = useRef<number | null>(null);
 	const [isRecording, setIsRecording] = useState(false);
 	const [method, setMethod] = useState<"superdough" | null>(null);
+	const [levels, setLevels] = useState<number[]>([]);
 
 	const reconnectAudioGraph = useCallback(() => {
 		const pattern = useStrudelStore.getState().pattern;
@@ -49,6 +52,18 @@ export function useAudioExport() {
 
 	const startRecording = useCallback(
 		async (options: AudioExportOptions) => {
+			const stopVisualizer = () => {
+				if (rafRef.current) {
+					cancelAnimationFrame(rafRef.current);
+					rafRef.current = null;
+				}
+				if (analyserRef.current && recorderRef.current) {
+					recorderRef.current.detachAnalyser(analyserRef.current);
+				}
+				analyserRef.current = null;
+				setLevels([]);
+			};
+
 			try {
 				setIsRecording(true);
 
@@ -65,6 +80,30 @@ export function useAudioExport() {
 				// Force a reconnect so the output chain is active when recording starts
 				reconnectAudioGraph();
 				await new Promise((resolve) => setTimeout(resolve, 0));
+
+				const analyser = recorder.createAnalyser(1024, 0.8);
+				analyserRef.current = analyser;
+				const data = new Uint8Array(analyser.fftSize);
+				const bars = 32;
+				const updateLevels = () => {
+					if (!analyserRef.current) return;
+					analyser.getByteTimeDomainData(data);
+					const step = Math.max(1, Math.floor(data.length / bars));
+					const next = Array.from({ length: bars }, (_, index) => {
+						let sum = 0;
+						const start = index * step;
+						const end = Math.min(data.length, start + step);
+						for (let i = start; i < end; i += 1) {
+							const sample = (data[i] ?? 128) - 128;
+							sum += sample * sample;
+						}
+						const rms = Math.sqrt(sum / (end - start)) / 128;
+						return Math.min(1, rms * 3);
+					});
+					setLevels(next);
+					rafRef.current = requestAnimationFrame(updateLevels);
+				};
+				updateLevels();
 
 				// Start recording
 				recorder.start();
@@ -90,6 +129,7 @@ export function useAudioExport() {
 
 				// Stop recording and get the audio data
 				const result = recorder.stop();
+				stopVisualizer();
 				recorder.dispose();
 				restoreTapRef.current?.();
 				restoreTapRef.current = null;
@@ -105,6 +145,15 @@ export function useAudioExport() {
 				setIsRecording(false);
 			} catch (error) {
 				options.onError?.(error as Error);
+				if (recorderRef.current && analyserRef.current) {
+					recorderRef.current.detachAnalyser(analyserRef.current);
+				}
+				if (rafRef.current) {
+					cancelAnimationFrame(rafRef.current);
+					rafRef.current = null;
+				}
+				analyserRef.current = null;
+				setLevels([]);
 				restoreTapRef.current?.();
 				restoreTapRef.current = null;
 				setIsRecording(false);
@@ -119,6 +168,15 @@ export function useAudioExport() {
 			recorderRef.current.stop();
 			recorderRef.current.dispose();
 		}
+		if (recorderRef.current && analyserRef.current) {
+			recorderRef.current.detachAnalyser(analyserRef.current);
+		}
+		if (rafRef.current) {
+			cancelAnimationFrame(rafRef.current);
+			rafRef.current = null;
+		}
+		analyserRef.current = null;
+		setLevels([]);
 		restoreTapRef.current?.();
 		restoreTapRef.current = null;
 		setIsRecording(false);
@@ -129,5 +187,6 @@ export function useAudioExport() {
 		method,
 		startRecording,
 		stopRecording,
+		levels,
 	};
 }

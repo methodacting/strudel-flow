@@ -74,7 +74,7 @@ export default function ProjectList({
 		useProjectsQuery(sessionReady);
 
 	useEffect(() => {
-		if (projects && projects.length > 0) {
+		if (projects) {
 			setCachedProjects(projects);
 		}
 	}, [projects]);
@@ -118,7 +118,7 @@ export default function ProjectList({
 				case "updated":
 				default:
 					return (
-						new Date(b.updatedAt).getTime() - new Date(b.updatedAt).getTime()
+						new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
 					);
 			}
 		});

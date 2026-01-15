@@ -59,6 +59,7 @@ export class AudioRecorder {
 	private recorderNode: AudioWorkletNode | null = null;
 	private masterGain: GainNode | null = null;
 	private sinkGain: GainNode | null = null;
+	private visualizerSink: GainNode | null = null;
 	private buffers: { left: Float32Array[]; right: Float32Array[] } = {
 		left: [],
 		right: [],
@@ -116,6 +117,53 @@ export class AudioRecorder {
 			this.buffers.right.push(new Float32Array(ch1));
 			this.frames += this.buffers.left[this.buffers.left.length - 1].length;
 		};
+	}
+
+	/**
+	 * Create an analyser for visualization, wired to the master tap.
+	 */
+	createAnalyser(fftSize = 256, smoothingTimeConstant = 0.85): AnalyserNode {
+		if (!this.masterGain) {
+			throw new Error("AudioRecorder not initialized. Call initialize() first.");
+		}
+		const analyser = this.audioContext.createAnalyser();
+		analyser.fftSize = fftSize;
+		analyser.smoothingTimeConstant = smoothingTimeConstant;
+		this.masterGain.connect(analyser);
+		this.visualizerSink = new GainNode(this.audioContext, { gain: 0 });
+		analyser.connect(this.visualizerSink);
+		this.visualizerSink.connect(this.audioContext.destination);
+		return analyser;
+	}
+
+	/**
+	 * Detach a previously created analyser from the tap.
+	 */
+	detachAnalyser(analyser: AnalyserNode): void {
+		if (!this.masterGain) return;
+		try {
+			this.masterGain.disconnect(analyser);
+		} catch {
+			// Ignore
+		}
+		if (this.visualizerSink) {
+			try {
+				analyser.disconnect(this.visualizerSink);
+			} catch {
+				// Ignore
+			}
+			try {
+				this.visualizerSink.disconnect();
+			} catch {
+				// Ignore
+			}
+			this.visualizerSink = null;
+		}
+		try {
+			analyser.disconnect();
+		} catch {
+			// Ignore
+		}
 	}
 
 	/**
@@ -374,6 +422,7 @@ export async function installStrudelTap(): Promise<StrudelTapHandle> {
 		} catch {
 			// Ignore
 		}
+		tapState = null;
 		restored = true;
 	};
 

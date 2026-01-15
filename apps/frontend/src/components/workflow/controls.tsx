@@ -5,7 +5,6 @@ import { NotebookText, Timer, Play, Pause, Menu, X, Download } from 'lucide-reac
 import { PatternPanel } from '@/components/pattern-panel';
 import { useGlobalPlayback } from '@/hooks/use-global-playback';
 import { CPM } from '@/components/cpm';
-import { ShareUrlPopover } from '@/components/share-url-popover';
 import { PresetPopover } from '@/components/preset-popover';
 import { AppInfoPopover } from '@/components/app-info-popover';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -75,7 +74,7 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
   const isMobile = useIsMobile();
 
   // Audio export hooks
-  const { isRecording, startRecording } = useAudioExport();
+  const { isRecording, startRecording, levels } = useAudioExport();
   const createExport = useCreateExportMutation();
   const { isGloballyPaused } = useGlobalPlayback();
 
@@ -92,7 +91,7 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
   const defaultNumLoops = 4;
   const defaultLoopDuration = (60 / cpm) * bpc * defaultNumLoops;
 
-  const handleExport = async (overwrite: boolean, numLoops: number) => {
+  const handleExport = async (numLoops: number) => {
     setIsExporting(true);
     setExportResult(null);
     setExportError(null);
@@ -115,13 +114,13 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
           const result = await createExport.mutateAsync({
             projectId,
             audioBlob: blob,
-            overwrite,
+            overwrite: false,
             duration: loopDuration,
           });
 
           // Update UI with the result
           setExportResult({
-            shareUrl: result.shareUrl,
+            shareUrl: `${window.location.origin}/audio/${result.exportId}`,
             audioUrl: result.audioUrl,
             exportId: result.exportId,
           });
@@ -188,8 +187,6 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
 
               <PresetPopover />
 
-              <ShareUrlPopover projectId={projectId} />
-
               <ExportButton />
 
               <AppInfoPopover />
@@ -216,6 +213,7 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
           exportResult={exportResult}
           exportError={exportError}
           isPaused={isGloballyPaused}
+          levels={levels}
         />
       </>
     );
@@ -235,8 +233,6 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
         <CPMPanelButton onToggle={() => setCpmPanelVisible((prev) => !prev)} />
 
         <PresetPopover />
-
-        <ShareUrlPopover projectId={projectId} />
 
         <ExportButton />
 
@@ -262,6 +258,7 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
         exportResult={exportResult}
         exportError={exportError}
         isPaused={isGloballyPaused}
+        levels={levels}
       />
     </>
   );
