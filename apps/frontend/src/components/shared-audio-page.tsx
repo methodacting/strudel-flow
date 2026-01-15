@@ -6,6 +6,7 @@ import { Button } from "./ui/button";
 export function SharedAudioPage() {
 	const { exportId } = useParams({ from: "/audio/$exportId" });
 	const audioRef = useRef<HTMLAudioElement>(null);
+	const audioUrlRef = useRef<string | null>(null);
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -28,6 +29,7 @@ export function SharedAudioPage() {
 				// Create a blob URL for the audio
 				const blob = await response.blob();
 				const url = URL.createObjectURL(blob);
+				audioUrlRef.current = url;
 				setAudioUrl(url);
 			} catch (err) {
 				setError(err instanceof Error ? err.message : "Failed to load audio");
@@ -40,8 +42,8 @@ export function SharedAudioPage() {
 
 		// Cleanup blob URL on unmount
 		return () => {
-			if (audioUrl) {
-				URL.revokeObjectURL(audioUrl);
+			if (audioUrlRef.current) {
+				URL.revokeObjectURL(audioUrlRef.current);
 			}
 		};
 	}, [exportId]);
