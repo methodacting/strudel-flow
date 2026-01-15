@@ -1,6 +1,6 @@
 import { ZoomSlider } from '@/components/zoom-slider';
 import { Panel } from '@xyflow/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NotebookText, Timer, Play, Pause, Menu, X, Download } from 'lucide-react';
 import { PatternPanel } from '@/components/pattern-panel';
 import { useGlobalPlayback } from '@/hooks/use-global-playback';
@@ -12,6 +12,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { ExportDialog } from '@/components/workflow/export-dialog';
 import { useAudioExport } from '@/hooks/use-audio-export';
 import { useCreateExportMutation } from '@/hooks/api/exports';
+import { useStrudelStore } from '@/store/strudel-store';
 
 function PlayPauseButton() {
   const { isGloballyPaused, toggleGlobalPlayback } = useGlobalPlayback();
@@ -76,24 +77,36 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
   // Audio export hooks
   const { isRecording, startRecording } = useAudioExport();
   const createExport = useCreateExportMutation();
+  const { isGloballyPaused } = useGlobalPlayback();
 
-  // Calculate loop duration based on CPM (cycles per minute) and BPC (beats per cycle)
-  // Default: 120 CPM / 4 BPC = 30 beats per minute = 2 seconds per cycle
-  // Multiply by 4 to record 4 loops (8 seconds) for a longer sample
-  const cpm = 120; // This should come from the actual CPM value
-  const bpc = 4;   // This should come from the actual BPC value
-  const numLoops = 4; // Record multiple loops for a longer sample
-  const loopDuration = (60 / cpm) * bpc * numLoops;
+  // Debug: log pause state changes
+  useEffect(() => {
+    console.log('[WorkflowControls] isGloballyPaused:', isGloballyPaused);
+  }, [isGloballyPaused]);
 
-  const handleExport = async (overwrite: boolean) => {
+  // Get actual CPM and BPC from Strudel store
+  const cpm = useStrudelStore((state) => parseFloat(state.cpm) || 120);
+  const bpc = useStrudelStore((state) => parseFloat(state.bpc) || 4);
+
+  // Calculate default loop duration (4 loops) for initial display
+  const defaultNumLoops = 4;
+  const defaultLoopDuration = (60 / cpm) * bpc * defaultNumLoops;
+
+  const handleExport = async (overwrite: boolean, numLoops: number) => {
     setIsExporting(true);
     setExportResult(null);
     setExportError(null);
 
     try {
+      // Calculate loop duration based on selected loop count
+      const loopDuration = (60 / cpm) * bpc * numLoops;
+
       // Start recording with Strudel's audio context
       await startRecording({
         duration: loopDuration,
+        cpm,
+        bpc,
+        syncToCycle: true, // Sync to cycle start for accurate looping
         onProgress: (remaining) => {
           console.log(`Recording time remaining: ${remaining.toFixed(1)}s`);
         },
@@ -194,12 +207,15 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
           open={exportDialogOpen}
           onOpenChange={setExportDialogOpen}
           projectId={projectId}
-          duration={loopDuration}
+          duration={defaultLoopDuration}
+          cpm={cpm}
+          bpc={bpc}
           onExport={handleExport}
           onReset={handleResetExport}
           isExporting={isExporting}
           exportResult={exportResult}
           exportError={exportError}
+          isPaused={isGloballyPaused}
         />
       </>
     );
@@ -237,12 +253,15 @@ export function WorkflowControls({ projectId }: { projectId: string }) {
         open={exportDialogOpen}
         onOpenChange={setExportDialogOpen}
         projectId={projectId}
-        duration={loopDuration}
+        duration={defaultLoopDuration}
+        cpm={cpm}
+        bpc={bpc}
         onExport={handleExport}
         onReset={handleResetExport}
         isExporting={isExporting}
         exportResult={exportResult}
         exportError={exportError}
+        isPaused={isGloballyPaused}
       />
     </>
   );

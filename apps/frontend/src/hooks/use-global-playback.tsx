@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '@/store/app-context';
 import { useWorkflowRunner } from './use-workflow-runner';
 // @ts-expect-error - Missing type declarations for @strudel/web
@@ -8,8 +8,9 @@ export function useGlobalPlayback() {
   const { runWorkflow, stopWorkflow } = useWorkflowRunner();
   const nodes = useAppStore((state) => state.nodes);
   const updateNodeData = useAppStore((state) => state.updateNodeData);
+  const isGloballyPaused = useAppStore((state) => state.isGloballyPaused);
+  const setIsGloballyPaused = useAppStore((state) => state.setIsGloballyPaused);
 
-  const [isGloballyPaused, setIsGloballyPaused] = useState(false);
   const nodeStatesBeforePause = useRef<
     Record<string, 'running' | 'paused' | 'stopped'>
   >({});

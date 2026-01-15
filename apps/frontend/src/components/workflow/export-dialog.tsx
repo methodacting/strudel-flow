@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Download, Link2, Loader2, Check } from "lucide-react";
+import { Download, Link2, Loader2, Check, AlertCircle } from "lucide-react";
 import {
 	Dialog,
 	DialogContent,
@@ -14,8 +14,11 @@ interface ExportDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	projectId: string; // Will be used for the actual export API call
-	duration: number;
-	onExport: (overwrite: boolean) => Promise<void>;
+	duration: number; // Base duration for default loop count
+	cpm: number; // Cycles per minute
+	bpc: number; // Beats per cycle
+	numLoops?: number; // Number of loops to record
+	onExport: (overwrite: boolean, numLoops: number) => Promise<void>;
 	onReset?: () => void; // Callback to reset export result
 	isExporting?: boolean;
 	exportResult?: {
@@ -24,31 +27,41 @@ interface ExportDialogProps {
 		exportId: string;
 	} | null;
 	exportError?: string | null;
+	isPaused?: boolean; // Whether playback is currently paused
 }
 
 export function ExportDialog({
 	open,
 	onOpenChange,
 	projectId: _projectId, // eslint-disable-line @typescript-eslint/no-unused-vars -- Will be used for the actual export API call
-	duration,
+	duration: _duration, // eslint-disable-line @typescript-eslint/no-unused-vars -- Not used directly, calculated from loops
+	cpm,
+	bpc,
+	numLoops = 4,
 	onExport,
 	onReset,
 	isExporting = false,
 	exportResult = null,
 	exportError = null,
+	isPaused = false,
 }: ExportDialogProps) {
 	const [overwrite, setOverwrite] = useState(false);
 	const [copied, setCopied] = useState(false);
+	const [loops, setLoops] = useState(numLoops);
+
+	// Calculate duration based on selected loops
+	const calculatedDuration = (60 / cpm) * bpc * loops;
 
 	// Reset copy state when dialog opens/closes
 	useEffect(() => {
 		if (!open) {
 			setCopied(false);
 		}
-	}, [open]);
+		console.log('[ExportDialog] isPaused:', isPaused, 'open:', open);
+	}, [open, isPaused]);
 
 	const handleExport = async () => {
-		await onExport(overwrite);
+		await onExport(overwrite, loops);
 	};
 
 	const handleCopyLink = async () => {
@@ -92,27 +105,57 @@ export function ExportDialog({
 				<DialogHeader>
 					<DialogTitle>Export Audio</DialogTitle>
 					<DialogDescription>
-						Export your composition as a WAV file ({duration.toFixed(1)}s)
+						Export your composition as a WAV file ({calculatedDuration.toFixed(1)}s)
 					</DialogDescription>
 				</DialogHeader>
 
 				<div className="space-y-4 py-4">
 					{!exportResult && !isExporting && (
-						<div className="flex items-center space-x-2">
-							<input
-								type="checkbox"
-								id="overwrite"
-								checked={overwrite}
-								onChange={(e) => setOverwrite(e.target.checked)}
-								className="w-4 h-4 rounded border-gray-300"
-							/>
-							<label
-								htmlFor="overwrite"
-								className="text-sm font-medium leading-none cursor-pointer"
-							>
-								Overwrite previous export
-							</label>
-						</div>
+						<>
+							{isPaused && (
+								<div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+									<AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+									<div className="text-sm text-yellow-800 dark:text-yellow-200">
+										<p className="font-medium mb-1">Playback is paused</p>
+										<p className="text-yellow-700 dark:text-yellow-300">Audio must be playing to record. Start playback before exporting.</p>
+									</div>
+								</div>
+							)}
+
+							<div className="space-y-2">
+								<label className="text-sm font-medium">Number of loops</label>
+								<div className="flex items-center gap-3">
+									<input
+										type="range"
+										min="1"
+										max="16"
+										value={loops}
+										onChange={(e) => setLoops(Number(e.target.value))}
+										className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+									/>
+									<span className="text-sm font-medium w-8 text-center">{loops}</span>
+								</div>
+								<p className="text-xs text-muted-foreground">
+									Recording duration: {calculatedDuration.toFixed(1)}s ({loops} loop{loops !== 1 ? 's' : ''})
+								</p>
+							</div>
+
+							<div className="flex items-center space-x-2">
+								<input
+									type="checkbox"
+									id="overwrite"
+									checked={overwrite}
+									onChange={(e) => setOverwrite(e.target.checked)}
+									className="w-4 h-4 rounded border-gray-300"
+								/>
+								<label
+									htmlFor="overwrite"
+									className="text-sm font-medium leading-none cursor-pointer"
+								>
+									Overwrite previous export
+								</label>
+							</div>
+						</>
 					)}
 
 					{isExporting && (
@@ -178,8 +221,8 @@ export function ExportDialog({
 							>
 								Cancel
 							</Button>
-							<Button onClick={handleExport} disabled={isExporting}>
-								{isExporting ? "Exporting..." : "Export"}
+							<Button onClick={handleExport} disabled={isExporting || isPaused}>
+								{isPaused ? "Resume playback first" : isExporting ? "Exporting..." : "Export"}
 							</Button>
 						</>
 					)}

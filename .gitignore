@@ -52,3 +52,4 @@ coverage/**
 /opencode.json.bak
 # END Ruler Generated Files
 .worktrees/
+strudel/

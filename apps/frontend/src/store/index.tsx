@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 // @ts-expect-error - Missing type declarations for @strudel/web
 import { initStrudel, samples } from '@strudel/web';
+import { installAudioOutputCapture } from '@/lib/audio-recorder';
 
 import { createAppStore } from '@/store/app-store';
 import {
@@ -20,6 +21,7 @@ export const AppStoreProvider = ({
   // Initialize Strudel once when the app starts
   useEffect(() => {
     console.log('Initializing Strudel audio engine...');
+    installAudioOutputCapture();
     initStrudel();
     samples('github:tidalcycles/dirt-samples');
   }, []);

@@ -23,6 +23,7 @@ export type AppState = {
   theme: string;
   draggedNodes: Map<string, AppNode>;
   connectionSites: Map<string, PotentialConnection>;
+  isGloballyPaused: boolean;
 };
 
 /**
@@ -59,6 +60,7 @@ export type AppActions = {
   onEdgesChange: OnEdgesChange<Edge>;
   onNodeDragStart: OnNodeDrag<AppNode>;
   onNodeDragStop: OnNodeDrag<AppNode>;
+  setIsGloballyPaused: (paused: boolean) => void;
 };
 
 export type AppStore = AppState & AppActions;
@@ -70,6 +72,7 @@ export const defaultState: AppState = {
   theme: 'supabase',
   draggedNodes: new Map(),
   connectionSites: new Map(),
+  isGloballyPaused: false,
 };
 
 export const createAppStore = (initialState: AppState = defaultState) => {
@@ -162,6 +165,7 @@ export const createAppStore = (initialState: AppState = defaultState) => {
           return { nodes: updatedNodes };
         });
       },
+      setIsGloballyPaused: (paused) => set({ isGloballyPaused: paused }),
     }))
   );
 
