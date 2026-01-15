@@ -1,7 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '@/store/app-context';
 import { useWorkflowRunner } from './use-workflow-runner';
-// @ts-expect-error - Missing type declarations for @strudel/web
 import { hush } from '@strudel/web';
 
 export function useGlobalPlayback() {
@@ -30,7 +29,7 @@ export function useGlobalPlayback() {
     hush();
     stopWorkflow();
     setIsGloballyPaused(true);
-  }, [nodes, stopWorkflow, isGloballyPaused, updateNodeData]);
+  }, [nodes, stopWorkflow, isGloballyPaused, updateNodeData, setIsGloballyPaused]);
 
   const globalPlay = useCallback(() => {
     if (!isGloballyPaused) return;
@@ -44,7 +43,7 @@ export function useGlobalPlayback() {
     nodeStatesBeforePause.current = {};
     setIsGloballyPaused(false);
     runWorkflow();
-  }, [updateNodeData, runWorkflow, isGloballyPaused]);
+  }, [updateNodeData, runWorkflow, isGloballyPaused, setIsGloballyPaused]);
 
   const toggleGlobalPlayback = useCallback(() => {
     if (isGloballyPaused) {

@@ -29,4 +29,19 @@ export default defineConfig(() => ({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          if (id.includes('@strudel')) return 'strudel';
+          if (id.includes('@xyflow')) return 'xyflow';
+          if (id.includes('@radix-ui')) return 'radix';
+          if (id.includes('react')) return 'react';
+          return 'vendor';
+        },
+      },
+    },
+  },
 }));

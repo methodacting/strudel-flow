@@ -111,7 +111,7 @@ export function useAudioExport() {
 				setMethod(null);
 			}
 		},
-		[],
+		[reconnectAudioGraph],
 	);
 
 	const stopRecording = useCallback(() => {

@@ -252,14 +252,17 @@ type StrudelTapHandle = {
 };
 
 let connectPatchInstalled = false;
-const capturedOutputs = new WeakMap<AudioContext, AudioNode>();
+const capturedOutputs = new WeakMap<BaseAudioContext, AudioNode>();
 
 export function installAudioOutputCapture(): void {
 	if (connectPatchInstalled) return;
 	connectPatchInstalled = true;
 
 	const originalConnect = AudioNode.prototype.connect;
-	AudioNode.prototype.connect = function (...args: unknown[]) {
+	AudioNode.prototype.connect = (function (
+		this: AudioNode,
+		...args: Parameters<AudioNode["connect"]>
+	) {
 		const destination = args[0];
 		if (destination instanceof AudioDestinationNode) {
 			const ctx = destination.context;
@@ -268,11 +271,11 @@ export function installAudioOutputCapture(): void {
 				capturedOutputs.set(ctx, this);
 			}
 		}
-		return originalConnect.apply(this, args as Parameters<AudioNode["connect"]>);
-	};
+		return originalConnect.apply(this, args);
+	}) as AudioNode["connect"];
 }
 
-function getCapturedOutputNode(audioContext: AudioContext): AudioNode | null {
+function getCapturedOutputNode(audioContext: BaseAudioContext): AudioNode | null {
 	return capturedOutputs.get(audioContext) ?? null;
 }
 
@@ -303,7 +306,7 @@ function getStrudelAudioContext(): AudioContext {
 }
 
 async function waitForOutputCapture(
-	audioContext: AudioContext,
+	audioContext: BaseAudioContext,
 	maxAttempts = 40,
 	delayMs = 50,
 ): Promise<AudioNode> {

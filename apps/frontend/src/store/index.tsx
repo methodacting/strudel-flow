@@ -1,5 +1,4 @@
 import { useRef, useEffect } from 'react';
-// @ts-expect-error - Missing type declarations for @strudel/web
 import { initStrudel, samples } from '@strudel/web';
 import { installAudioOutputCapture } from '@/lib/audio-recorder';
 
