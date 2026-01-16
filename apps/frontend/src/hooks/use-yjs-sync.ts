@@ -10,10 +10,11 @@ export interface UseYjsSyncOptions {
 	token?: string;
 	userId?: string;
 	userName?: string;
+	isReadOnly?: boolean;
 }
 
 export function useYjsSync(options: UseYjsSyncOptions) {
-	const { projectId, token, userId, userName } = options;
+	const { projectId, token, userId, userName, isReadOnly } = options;
 
 	const clientRef = useRef<YjsClient | null>(null);
 	const awarenessManagerRef = useRef<ReturnType<typeof createAwarenessManager> | null>(null);
@@ -102,13 +103,14 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 	// Sync Zustand changes to Yjs
 	useEffect(() => {
 		if (!clientRef.current || !clientRef.current.isConnected()) return;
+		if (isReadOnly) return;
 		if (syncToYjsRef.current) {
 			syncToYjsRef.current = false;
 			return;
 		}
 
 		clientRef.current.setState(nodes, edges);
-	}, [nodes, edges]);
+	}, [edges, isReadOnly, nodes]);
 
 	// Expose awareness manager
 	const updateCursor = useCallback((x: number, y: number) => {

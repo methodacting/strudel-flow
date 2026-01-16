@@ -9,6 +9,7 @@ import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { authMiddleware } from "../middleware/auth";
 import type { AppBindings, AppVariables } from "../types/hono";
+import { ProjectService } from "../services/project-service";
 
 export const yjsRouter = new Hono<{
 	Bindings: AppBindings;
@@ -25,7 +26,15 @@ export const yjsRouter = new Hono<{
 			}),
 		),
 		async (c) => {
+			const user = c.get("user");
 			const { id } = c.req.valid("param");
+			const service = new ProjectService(c.env);
+			const access = await service.checkAccess(id, user.id);
+
+			if (!access.allowed) {
+				return c.json({ error: "Forbidden" }, 403);
+			}
+
 			const stub = c.env.Y_DURABLE_OBJECTS.get(
 				c.env.Y_DURABLE_OBJECTS.idFromName(id),
 			);

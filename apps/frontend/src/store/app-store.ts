@@ -24,6 +24,7 @@ export type AppState = {
   draggedNodes: Map<string, AppNode>;
   connectionSites: Map<string, PotentialConnection>;
   isGloballyPaused: boolean;
+  isReadOnly: boolean;
 };
 
 /**
@@ -61,6 +62,7 @@ export type AppActions = {
   onNodeDragStart: OnNodeDrag<AppNode>;
   onNodeDragStop: OnNodeDrag<AppNode>;
   setIsGloballyPaused: (paused: boolean) => void;
+  setIsReadOnly: (readOnly: boolean) => void;
 };
 
 export type AppStore = AppState & AppActions;
@@ -73,6 +75,7 @@ export const defaultState: AppState = {
   draggedNodes: new Map(),
   connectionSites: new Map(),
   isGloballyPaused: false,
+  isReadOnly: false,
 };
 
 export const createAppStore = (initialState: AppState = defaultState) => {
@@ -81,6 +84,9 @@ export const createAppStore = (initialState: AppState = defaultState) => {
       ...initialState,
 
       onNodesChange: async (changes) => {
+        if (get().isReadOnly) {
+          return;
+        }
         const nextNodes = applyNodeChanges(changes, get().nodes);
         set({ nodes: nextNodes });
       },
@@ -88,14 +94,22 @@ export const createAppStore = (initialState: AppState = defaultState) => {
       setNodes: (nodes) => set({ nodes }),
 
       addNode: (node) => {
+        if (get().isReadOnly) {
+          return;
+        }
         const nextNodes = [...get().nodes, node];
         set({ nodes: nextNodes });
       },
 
       removeNode: (nodeId) =>
-        set({ nodes: get().nodes.filter((node) => node.id !== nodeId) }),
+        get().isReadOnly
+          ? undefined
+          : set({ nodes: get().nodes.filter((node) => node.id !== nodeId) }),
 
       addNodeByType: (type, position) => {
+        if (get().isReadOnly) {
+          return null;
+        }
         const newNode = createNodeByType({ type, position });
 
         if (!newNode) return null;
@@ -111,20 +125,32 @@ export const createAppStore = (initialState: AppState = defaultState) => {
       getEdges: () => get().edges,
 
       addEdge: (edge) => {
+        if (get().isReadOnly) {
+          return;
+        }
         const nextEdges = addEdge(edge, get().edges);
         set({ edges: nextEdges });
       },
 
       removeEdge: (edgeId) => {
+        if (get().isReadOnly) {
+          return;
+        }
         set({ edges: get().edges.filter((edge) => edge.id !== edgeId) });
       },
 
       onEdgesChange: (changes) => {
+        if (get().isReadOnly) {
+          return;
+        }
         const nextEdges = applyEdgeChanges(changes, get().edges);
         set({ edges: nextEdges });
       },
 
       onConnect: (connection) => {
+        if (get().isReadOnly) {
+          return;
+        }
         // Prevent self-connecting nodes
         if (connection.source === connection.target) {
           return;
@@ -149,12 +175,21 @@ export const createAppStore = (initialState: AppState = defaultState) => {
       setColorMode: (colorMode) => set({ colorMode }),
 
       onNodeDragStart: (_, __, nodes) => {
+        if (get().isReadOnly) {
+          return;
+        }
         set({ draggedNodes: new Map(nodes.map((node) => [node.id, node])) });
       },
       onNodeDragStop: () => {
+        if (get().isReadOnly) {
+          return;
+        }
         set({ draggedNodes: new Map() });
       },
       updateNodeData: (nodeId, updates) => {
+        if (get().isReadOnly) {
+          return;
+        }
         set((state) => {
           const updatedNodes = state.nodes.map((node) =>
             node.id === nodeId
@@ -166,6 +201,7 @@ export const createAppStore = (initialState: AppState = defaultState) => {
         });
       },
       setIsGloballyPaused: (paused) => set({ isGloballyPaused: paused }),
+      setIsReadOnly: (readOnly) => set({ isReadOnly: readOnly }),
     }))
   );
 

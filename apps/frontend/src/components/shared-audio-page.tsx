@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "@tanstack/react-router";
-import { Play, Pause, Download, Home, Loader2 } from "lucide-react";
+import { Play, Pause, Download, Home, Loader2, Check, Copy } from "lucide-react";
 import { Button } from "./ui/button";
 
 export function SharedAudioPage() {
@@ -14,6 +14,7 @@ export function SharedAudioPage() {
 	const [duration, setDuration] = useState(0);
 	const [currentTime, setCurrentTime] = useState(0);
 	const [levels, setLevels] = useState<number[]>([]);
+	const [copied, setCopied] = useState(false);
 
 	useEffect(() => {
 		const fetchAudio = async () => {
@@ -93,6 +94,16 @@ export function SharedAudioPage() {
 			document.body.appendChild(a);
 			a.click();
 			document.body.removeChild(a);
+		}
+	};
+
+	const handleCopyLink = async () => {
+		try {
+			await navigator.clipboard.writeText(window.location.href);
+			setCopied(true);
+			setTimeout(() => setCopied(false), 2000);
+		} catch (error) {
+			console.error("Failed to copy link:", error);
 		}
 	};
 
@@ -239,12 +250,20 @@ export function SharedAudioPage() {
 									</Button>
 									<Button
 										variant="outline"
-										onClick={() => {
-											navigator.clipboard.writeText(window.location.href);
-										}}
+										onClick={handleCopyLink}
 										className="flex-1"
 									>
-										Copy Link
+										{copied ? (
+											<>
+												<Check className="h-4 w-4 mr-2 text-green-600" />
+												<span className="text-green-600">Copied!</span>
+											</>
+										) : (
+											<>
+												<Copy className="h-4 w-4 mr-2" />
+												Copy Link
+											</>
+										)}
 									</Button>
 								</div>
 

@@ -87,7 +87,7 @@ export const projectRouter = new Hono<{
 		return c.json({ error: "Forbidden" }, 403);
 	}
 
-	return c.json({ project });
+	return c.json({ project: { ...project, accessRole: access.role } });
 	})
 	.put(
 		"/projects/:id",
@@ -153,7 +153,7 @@ export const projectRouter = new Hono<{
 		zValidator(
 			"json",
 			z.object({
-				role: z.string().optional(),
+				role: z.enum(["viewer", "editor"]).optional(),
 			}),
 		),
 		async (c) => {
@@ -174,6 +174,62 @@ export const projectRouter = new Hono<{
 
 			return c.json({ inviteUrl });
 	})
+	.get(
+		"/projects/:id/invites",
+		zValidator(
+			"param",
+			z.object({
+				id: z.string().min(1),
+			}),
+		),
+		async (c) => {
+			const user = c.get("user");
+			const { id: projectId } = c.req.valid("param");
+
+			const service = new ProjectService(c.env);
+			const access = await service.checkAccess(projectId, user.id);
+
+			if (!access.allowed || access.role !== "owner") {
+				return c.json({ error: "Forbidden" }, 403);
+			}
+
+			const invites = await service.listActiveInvites(projectId);
+			const origin = c.req.header("origin") || new URL(c.req.url).origin;
+
+			return c.json({
+				invites: invites.map((invite) => ({
+					role: invite.role,
+					inviteUrl: `${origin}/project/join/${invite.token}`,
+					expiresAt: invite.expiresAt,
+				})),
+			});
+		},
+	)
+	.delete(
+		"/projects/:id/invite/:role",
+		zValidator(
+			"param",
+			z.object({
+				id: z.string().min(1),
+				role: z.enum(["viewer", "editor"]),
+			}),
+		),
+		async (c) => {
+			const user = c.get("user");
+			const { id: projectId, role } = c.req.valid("param");
+
+			const service = new ProjectService(c.env);
+			const access = await service.checkAccess(projectId, user.id);
+
+			if (!access.allowed || access.role !== "owner") {
+				return c.json({ error: "Forbidden" }, 403);
+			}
+
+			await service.revokeInvite(projectId, role);
+
+			return c.json({ success: true });
+		},
+	)
 	.post(
 		"/projects/join/:token",
 		zValidator(

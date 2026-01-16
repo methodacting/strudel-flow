@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import type { AppBindings, AppVariables } from "../types/hono";
+import { ProjectService } from "../services/project-service";
 
 export const realtimeRouter = new Hono<{
 	Bindings: AppBindings;
@@ -22,6 +23,12 @@ export const realtimeRouter = new Hono<{
 	const user = c.get("user");
 	const { id: projectId } = c.req.valid("param");
 
+	const service = new ProjectService(c.env);
+	const access = await service.checkAccess(projectId, user.id);
+	if (!access.allowed) {
+		return c.json({ error: "Forbidden" }, 403);
+	}
+
 	// Generate unique client ID for this connection
 	const clientId = nanoid();
 	const userName = user?.name || "Anonymous";
@@ -35,6 +42,7 @@ export const realtimeRouter = new Hono<{
 		wsUrl,
 		clientId,
 		projectId,
+		role: access.role,
 		user: {
 			id: user?.id,
 			name: userName,

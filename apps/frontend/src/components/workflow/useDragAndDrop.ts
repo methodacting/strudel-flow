@@ -8,14 +8,18 @@ import { AppStore } from '@/store/app-store';
 
 const selector = (state: AppStore) => ({
   addNode: state.addNode,
+  isReadOnly: state.isReadOnly,
 });
 
 export function useDragAndDrop() {
   const { screenToFlowPosition } = useReactFlow();
-  const { addNode } = useAppStore(useShallow(selector));
+  const { addNode, isReadOnly } = useAppStore(useShallow(selector));
 
   const onDrop: React.DragEventHandler = useCallback(
     (event) => {
+      if (isReadOnly) {
+        return;
+      }
       const nodeProps = JSON.parse(
         event.dataTransfer.getData('application/reactflow')
       );
@@ -33,7 +37,7 @@ export function useDragAndDrop() {
       });
       addNode(newNode);
     },
-    [addNode, screenToFlowPosition]
+    [addNode, isReadOnly, screenToFlowPosition]
   );
 
   const onDragOver: React.DragEventHandler = useCallback(

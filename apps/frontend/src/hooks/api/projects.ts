@@ -9,6 +9,15 @@ import type { Project } from "@/types/project";
 const withSignal = (signal?: AbortSignal) =>
 	signal ? { init: { signal } } : undefined;
 
+const toAccessRole = (
+	role: string | null | undefined,
+): Project["accessRole"] => {
+	if (role === "owner" || role === "editor" || role === "viewer") {
+		return role;
+	}
+	return undefined;
+};
+
 export const useProjectsQuery = (enabled: boolean) => {
 	const query = useQuery<Project[], ApiStatusError>({
 		queryKey: queryKeys.projects,
@@ -62,7 +71,58 @@ export const useProjectQuery = (projectId: string, enabled: boolean) =>
 				);
 			}
 			const data = await response.json();
-			return data.project;
+			const project = data.project as Project & { accessRole?: string | null };
+			return {
+				...project,
+				accessRole: toAccessRole(project.accessRole),
+			};
+		},
+	});
+
+export type ProjectInvite = {
+	role: "viewer" | "editor";
+	inviteUrl: string;
+	expiresAt: number;
+};
+
+const toInviteRole = (role: string | null | undefined): ProjectInvite["role"] =>
+	role === "editor" ? "editor" : "viewer";
+
+export const useProjectInvitesQuery = (
+	projectId: string,
+	enabled: boolean,
+) =>
+	useQuery<ProjectInvite[], ApiStatusError>({
+		queryKey: queryKeys.projectInvites(projectId),
+		enabled,
+		queryFn: async ({ signal }) => {
+			const response = await honoClient.api.projects[":id"].invites.$get(
+				{ param: { id: projectId } },
+				withSignal(signal),
+			);
+			if (!response.ok) {
+				throw new ApiStatusError(
+					await getErrorMessage(response, "Failed to fetch invites"),
+					response.status,
+				);
+			}
+			const data = await response.json();
+			const invites = (data.invites ?? []) as Array<{
+				role?: string | null;
+				inviteUrl: string;
+				expiresAt: number | string;
+			}>;
+			return invites.map((invite) => {
+				const expiresAt =
+					typeof invite.expiresAt === "string"
+						? Number(invite.expiresAt)
+						: invite.expiresAt;
+				return {
+					role: toInviteRole(invite.role),
+					inviteUrl: invite.inviteUrl,
+					expiresAt,
+				};
+			});
 		},
 	});
 
@@ -162,19 +222,40 @@ export const useCreateInviteMutation = () =>
 	useMutation({
 		mutationFn: async (payload: {
 			projectId: string;
-			role?: string;
+			role: "viewer" | "editor";
 			signal?: AbortSignal;
 		}) => {
 			const response = await honoClient.api.projects[":id"].invite.$post(
 				{
 					param: { id: payload.projectId },
-					json: payload.role ? { role: payload.role } : {},
+					json: { role: payload.role },
 				},
 				withSignal(payload.signal),
 			);
 			if (!response.ok) {
 				throw new ApiStatusError(
 					await getErrorMessage(response, "Failed to create invite"),
+					response.status,
+				);
+			}
+			return response.json();
+		},
+	});
+
+export const useRevokeInviteMutation = () =>
+	useMutation({
+		mutationFn: async (payload: {
+			projectId: string;
+			role: "viewer" | "editor";
+			signal?: AbortSignal;
+		}) => {
+			const response = await honoClient.api.projects[":id"].invite[":role"].$delete(
+				{ param: { id: payload.projectId, role: payload.role } },
+				withSignal(payload.signal),
+			);
+			if (!response.ok) {
+				throw new ApiStatusError(
+					await getErrorMessage(response, "Failed to revoke invite"),
 					response.status,
 				);
 			}

@@ -32,6 +32,7 @@ export function useAudioExport() {
 	const [isRecording, setIsRecording] = useState(false);
 	const [method, setMethod] = useState<"superdough" | null>(null);
 	const [levels, setLevels] = useState<number[]>([]);
+	const preRollSeconds = 0.3;
 
 	const reconnectAudioGraph = useCallback(() => {
 		const pattern = useStrudelStore.getState().pattern;
@@ -108,6 +109,12 @@ export function useAudioExport() {
 				// Start recording
 				recorder.start();
 
+				if (preRollSeconds > 0) {
+					await new Promise((resolve) =>
+						setTimeout(resolve, preRollSeconds * 1000),
+					);
+				}
+
 				// Progress updates
 				const startTime = Date.now();
 				const updateProgress = () => {
@@ -134,13 +141,43 @@ export function useAudioExport() {
 				restoreTapRef.current?.();
 				restoreTapRef.current = null;
 
+				const samplesToTrim = Math.floor(preRollSeconds * result.sampleRate);
+				const trimBuffers = (buffers: Float32Array[], trim: number) => {
+					if (trim <= 0) return buffers;
+					let remaining = trim;
+					const next: Float32Array[] = [];
+					for (const chunk of buffers) {
+						if (remaining >= chunk.length) {
+							remaining -= chunk.length;
+							continue;
+						}
+						if (remaining > 0) {
+							next.push(chunk.slice(remaining));
+							remaining = 0;
+							continue;
+						}
+						next.push(chunk);
+					}
+					return next;
+				};
+
+				const trimmedLeft = trimBuffers(result.left, samplesToTrim);
+				const trimmedRight = trimBuffers(result.right, samplesToTrim);
+
 				// Encode to WAV
-				const wavBlob = encodeToWav(result.left, result.right, {
+				const wavBlob = encodeToWav(trimmedLeft, trimmedRight, {
 					sampleRate: result.sampleRate,
 					numChannels: 2,
 				});
 
-				console.log(`Recording complete. Duration: ${result.duration.toFixed(2)}s`);
+				const trimmedSamples = trimmedLeft.reduce(
+					(total, chunk) => total + chunk.length,
+					0,
+				);
+				const trimmedDuration = trimmedSamples / result.sampleRate;
+				console.log(
+					`Recording complete. Duration: ${trimmedDuration.toFixed(2)}s`,
+				);
 				options.onComplete?.(wavBlob);
 				setIsRecording(false);
 			} catch (error) {

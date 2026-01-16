@@ -59,6 +59,7 @@ const projectRoute = createRoute({
 			<ProjectEditor
 				projectId={project.id}
 				projectName={project.name}
+				accessRole={project.accessRole}
 				sessionReady={sessionReady}
 			/>
 		);

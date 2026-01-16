@@ -11,9 +11,10 @@ import { useThemeCss } from '@/hooks/use-theme-css';
 
 type WorkflowProps = {
   projectId: string;
+  isReadOnly: boolean;
 };
 
-export default function Workflow({ projectId }: WorkflowProps) {
+export default function Workflow({ projectId, isReadOnly }: WorkflowProps) {
   useGlobalPlayback(); // Enable global spacebar pause/play
 
   const {
@@ -61,6 +62,9 @@ export default function Workflow({ projectId }: WorkflowProps) {
         onNodeDragStart={onNodeDragStart}
         onNodeDragStop={onNodeDragStop}
         colorMode={colorMode}
+        nodesDraggable={!isReadOnly}
+        nodesConnectable={!isReadOnly}
+        elementsSelectable={!isReadOnly}
         fitView
       >
         <Background />

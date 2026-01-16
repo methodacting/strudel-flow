@@ -4,4 +4,5 @@ export interface Project {
 	createdAt: string;
 	updatedAt: string;
 	organizationId?: string | null;
+	accessRole?: "owner" | "editor" | "viewer";
 }

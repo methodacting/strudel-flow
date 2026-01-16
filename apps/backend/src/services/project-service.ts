@@ -1,7 +1,7 @@
 import { db } from "../db";
 import { nanoid } from "nanoid";
 import * as schema from "@strudel-flow/db/schema";
-import { eq, desc, and, or, inArray } from "drizzle-orm";
+import { eq, desc, and, or, inArray, gt, isNull } from "drizzle-orm";
 import type { AppBindings } from "../types/hono";
 
 export class ProjectService {
@@ -109,9 +109,22 @@ export class ProjectService {
 			.where(eq(schema.project.id, projectId));
 	}
 
-	async createInvite(projectId: string, createdBy: string, role: string = "editor") {
+	async createInvite(
+		projectId: string,
+		createdBy: string,
+		role: string = "editor",
+	) {
 		const token = nanoid();
 		const now = new Date();
+
+		await db(this.env.DB)
+			.delete(schema.projectInvite)
+			.where(
+				and(
+					eq(schema.projectInvite.projectId, projectId),
+					eq(schema.projectInvite.role, role),
+				),
+			);
 
 		await db(this.env.DB).insert(schema.projectInvite).values({
 			id: nanoid(),
@@ -134,6 +147,34 @@ export class ProjectService {
 			.where(eq(schema.projectInvite.token, token));
 
 		return invites[0];
+	}
+
+	async listActiveInvites(projectId: string) {
+		const now = new Date();
+		return db(this.env.DB)
+			.select()
+			.from(schema.projectInvite)
+			.where(
+				and(
+					eq(schema.projectInvite.projectId, projectId),
+					gt(schema.projectInvite.expiresAt, now),
+					or(
+						isNull(schema.projectInvite.maxUses),
+						gt(schema.projectInvite.maxUses, schema.projectInvite.uses),
+					),
+				),
+			);
+	}
+
+	async revokeInvite(projectId: string, role: string) {
+		await db(this.env.DB)
+			.delete(schema.projectInvite)
+			.where(
+				and(
+					eq(schema.projectInvite.projectId, projectId),
+					eq(schema.projectInvite.role, role),
+				),
+			);
 	}
 
 	async joinProject(projectId: string, userId: string, role: string = "editor") {
@@ -164,7 +205,7 @@ export class ProjectService {
 				project.organizationId,
 			);
 			if (isOrgMember) {
-				return { allowed: true, role: "member" };
+				return { allowed: true, role: "editor" };
 			}
 		}
 
