@@ -239,39 +239,44 @@ export const projectRouter = new Hono<{
 			}),
 		),
 		async (c) => {
-			const user = c.get("user");
-			const { token } = c.req.valid("param");
+			try {
+				const user = c.get("user");
+				const { token } = c.req.valid("param");
 
-			const service = new ProjectService(c.env);
-			const invite = await service.getInviteByToken(token);
+				const service = new ProjectService(c.env);
+				const invite = await service.getInviteByToken(token);
 
-			if (!invite) {
-				return c.json({ error: "Invite not found" }, 404);
+				if (!invite) {
+					return c.json({ error: "Invite not found" }, 404);
+				}
+
+				const now = new Date();
+				if (invite.expiresAt && invite.expiresAt < now) {
+					return c.json({ error: "Invite expired" }, 410);
+				}
+
+				if (invite.maxUses !== null && invite.uses >= invite.maxUses) {
+					return c.json({ error: "Invite already used" }, 409);
+				}
+
+				const access = await service.checkAccess(invite.projectId, user.id);
+				if (!access.allowed) {
+					await service.joinProject(invite.projectId, user.id, invite.role);
+					await db(c.env.DB)
+						.update(schema.projectInvite)
+						.set({ uses: invite.uses + 1 })
+						.where(eq(schema.projectInvite.id, invite.id));
+				}
+
+				const project = await service.getProject(invite.projectId);
+				if (!project) {
+					return c.json({ error: "Project not found" }, 404);
+				}
+
+				return c.json({ project });
+			} catch (error) {
+				console.error("[projects] join failed", error);
+				return c.json({ error: "Failed to join project" }, 500);
 			}
-
-			const now = new Date();
-			if (invite.expiresAt && invite.expiresAt < now) {
-				return c.json({ error: "Invite expired" }, 410);
-			}
-
-			if (invite.maxUses !== null && invite.uses >= invite.maxUses) {
-				return c.json({ error: "Invite already used" }, 409);
-			}
-
-			const access = await service.checkAccess(invite.projectId, user.id);
-			if (!access.allowed) {
-				await service.joinProject(invite.projectId, user.id, invite.role);
-				await db(c.env.DB)
-					.update(schema.projectInvite)
-					.set({ uses: invite.uses + 1 })
-					.where(eq(schema.projectInvite.id, invite.id));
-			}
-
-			const project = await service.getProject(invite.projectId);
-			if (!project) {
-				return c.json({ error: "Project not found" }, 404);
-			}
-
-			return c.json({ project });
 		},
 	);

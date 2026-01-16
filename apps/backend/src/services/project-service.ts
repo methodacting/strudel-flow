@@ -180,12 +180,15 @@ export class ProjectService {
 	async joinProject(projectId: string, userId: string, role: string = "editor") {
 		const now = new Date();
 
-		await db(this.env.DB).insert(schema.projectMember).values({
-			projectId,
-			userId,
-			role,
-			joinedAt: now,
-		});
+		await db(this.env.DB)
+			.insert(schema.projectMember)
+			.values({
+				projectId,
+				userId,
+				role,
+				joinedAt: now,
+			})
+			.onConflictDoNothing();
 	}
 
 	async checkAccess(projectId: string, userId: string) {
