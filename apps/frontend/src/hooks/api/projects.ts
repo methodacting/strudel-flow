@@ -202,6 +202,7 @@ export const useDeleteProjectMutation = () => {
 
 export const useJoinProjectMutation = () =>
 	useMutation({
+		retry: false,
 		mutationFn: async (payload: { token: string; signal?: AbortSignal }) => {
 			const response = await honoClient.api.projects.join[":token"].$post(
 				{ param: { token: payload.token } },

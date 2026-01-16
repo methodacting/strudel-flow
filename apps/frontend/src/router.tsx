@@ -2,7 +2,7 @@
 import { Outlet, RouterProvider, createRootRoute, createRoute, createRouter, useParams, useNavigate } from "@tanstack/react-router";
 import { ApiStatusError } from "@/lib/api-helpers";
 import { useProjectQuery, useJoinProjectMutation } from "@/hooks/api/projects";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAnonymousSession } from "./hooks/use-anonymous-session";
 import { ProjectEditor, ProjectManager } from "./app";
 import { useSessionContext } from "./contexts/session-context";
@@ -76,6 +76,7 @@ const joinRoute = createRoute({
 			title: string;
 			description: string;
 		} | null>(null);
+		const attemptedJoinRef = useRef(false);
 		const joinProject = useJoinProjectMutation();
 		const navigate = useNavigate();
 
@@ -83,6 +84,8 @@ const joinRoute = createRoute({
 			let cancelled = false;
 			const controller = new AbortController();
 			if (!sessionReady) return;
+			if (attemptedJoinRef.current) return;
+			attemptedJoinRef.current = true;
 
 			void (async () => {
 				try {
