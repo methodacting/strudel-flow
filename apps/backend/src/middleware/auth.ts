@@ -6,22 +6,21 @@ export async function authMiddleware(
 	c: Context<{ Bindings: AppBindings; Variables: AppVariables }>,
 	next: Next,
 ) {
-	console.log("[auth-middleware] Checking session for:", c.req.path);
-	console.log("[auth-middleware] Origin:", c.req.header("origin"));
-	console.log("[auth-middleware] Cookie header:", c.req.header("cookie"));
-
 	const auth = getAuth(c.env.DB, c.env);
-
-	const session: AuthSession = await auth.api.getSession({
-		headers: c.req.raw.headers,
-	});
+	let session: AuthSession | null = null;
+	try {
+		session = await auth.api.getSession({
+			headers: c.req.raw.headers,
+		});
+	} catch (error) {
+		console.error("[auth-middleware] getSession failed");
+		return c.json({ error: "Auth failed" }, 500);
+	}
 
 	if (!session) {
-		console.log("[auth-middleware] No session found, returning 401");
 		return c.json({ error: "Unauthorized" }, 401);
 	}
 
-	console.log("[auth-middleware] Session found for user:", session.user?.id);
 	// Attach session to context
 	const user = {
 		...session.user,

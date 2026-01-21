@@ -191,7 +191,7 @@ export class AudioRecorder {
 		this.recorderNode.port.postMessage("start");
 		this.isRecording = true;
 
-		console.log("AudioRecorder: Recording started");
+		console.debug("AudioRecorder: Recording started");
 	}
 
 	/**
@@ -229,7 +229,7 @@ export class AudioRecorder {
 		}
 
 		const duration = this.frames / this.sampleRate;
-		console.log(`AudioRecorder: Recording stopped. Duration: ${duration.toFixed(2)}s`);
+		console.debug(`AudioRecorder: Recording stopped. Duration: ${duration.toFixed(2)}s`);
 
 		return {
 			left: this.buffers.left,
@@ -486,9 +486,9 @@ export async function waitForCycleStart(cpm: number, bpc: number): Promise<void>
 
 	// Wait until the next cycle start
 	if (waitTime > 0) {
-		console.log(`Waiting ${waitTime.toFixed(3)}s for next cycle start...`);
+		console.debug(`Waiting ${waitTime.toFixed(3)}s for next cycle start...`);
 		await new Promise((resolve) => setTimeout(resolve, waitTime * 1000));
 	}
 
-	console.log("Cycle start reached, beginning recording");
+	console.debug("Cycle start reached, beginning recording");
 }

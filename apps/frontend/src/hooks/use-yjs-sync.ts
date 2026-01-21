@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { useAppStore } from "@/store/app-context";
 import { createYjsClient, YjsClient } from "@/lib/yjs-client";
 import { createAwarenessManager } from "@/lib/awareness";
@@ -13,12 +13,22 @@ export interface UseYjsSyncOptions {
 	isReadOnly?: boolean;
 }
 
+export interface UseYjsSyncResult {
+	isConnected: boolean;
+	updateCursor: (x: number, y: number) => void;
+	updateSelection: (nodeId: string) => void;
+	clearSelection: () => void;
+	getRemoteUsers: () => AwarenessState[];
+	remoteUsers: AwarenessState[];
+}
+
 export function useYjsSync(options: UseYjsSyncOptions) {
 	const { projectId, token, userId, userName, isReadOnly } = options;
 
 	const clientRef = useRef<YjsClient | null>(null);
 	const awarenessManagerRef = useRef<ReturnType<typeof createAwarenessManager> | null>(null);
 	const syncToYjsRef = useRef(false);
+	const [remoteUsers, setRemoteUsers] = useState<AwarenessState[]>([]);
 	const { data: realtimeData } = useRealtimeUrlQuery(
 		projectId,
 		Boolean(projectId),
@@ -51,13 +61,13 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 					setEdges(newEdges);
 				},
 				onAwarenessChange: (states) => {
-					console.log("Awareness changed:", states);
+					console.debug("Awareness changed:", states);
 				},
 				onConnect: () => {
-					console.log("Yjs client connected");
+					console.debug("Yjs client connected");
 				},
 				onDisconnect: () => {
-					console.log("Yjs client disconnected");
+					console.debug("Yjs client disconnected");
 				},
 			});
 
@@ -69,7 +79,8 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 
 				const unsubscribe = awarenessManagerRef.current?.onRemoteUsersChange(
 					(users: Array<AwarenessState>) => {
-						console.log("Remote users changed:", users);
+						console.debug("Remote users changed:", users);
+						setRemoteUsers(users);
 					},
 				);
 
@@ -135,5 +146,6 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 		updateSelection,
 		clearSelection,
 		getRemoteUsers,
+		remoteUsers,
 	};
 }

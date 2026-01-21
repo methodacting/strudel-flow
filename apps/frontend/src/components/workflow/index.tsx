@@ -1,21 +1,27 @@
 import { Background, ReactFlow } from '@xyflow/react';
 import { useShallow } from 'zustand/react/shallow';
+import { useCallback, useRef } from 'react';
 
 import { nodeTypes } from '@/components/nodes';
 import { edgeTypes } from '@/components/edges';
 import { useAppStore } from '@/store/app-context';
 import { WorkflowControls } from './controls';
+import { CursorOverlay } from './cursor-overlay';
 import { useDragAndDrop } from './useDragAndDrop';
 import { useGlobalPlayback } from '@/hooks/use-global-playback';
 import { useThemeCss } from '@/hooks/use-theme-css';
+import type { UseYjsSyncResult } from '@/hooks/use-yjs-sync';
 
 type WorkflowProps = {
   projectId: string;
   isReadOnly: boolean;
+  awareness?: UseYjsSyncResult;
 };
 
-export default function Workflow({ projectId, isReadOnly }: WorkflowProps) {
+export default function Workflow({ projectId, isReadOnly, awareness }: WorkflowProps) {
   useGlobalPlayback(); // Enable global spacebar pause/play
+
+  const reactFlowInstance = useRef<any>(null);
 
   const {
     nodes,
@@ -46,6 +52,21 @@ export default function Workflow({ projectId, isReadOnly }: WorkflowProps) {
 
   const { onDragOver, onDrop } = useDragAndDrop();
 
+  // Track cursor movement for awareness
+  const handleMouseMove = useCallback((event: React.MouseEvent) => {
+    if (!reactFlowInstance.current || !awareness) return;
+
+    // Get position relative to the ReactFlow container
+    const target = event.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+
+    // Calculate position relative to the viewport (what awareness expects)
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    awareness.updateCursor(x, y);
+  }, [awareness]);
+
   return (
     <div className="reactflow-wrapper">
       <ReactFlow
@@ -66,9 +87,19 @@ export default function Workflow({ projectId, isReadOnly }: WorkflowProps) {
         nodesConnectable={!isReadOnly}
         elementsSelectable={!isReadOnly}
         fitView
+        onInit={(instance) => {
+          reactFlowInstance.current = instance;
+        }}
+        onMouseMove={handleMouseMove}
       >
         <Background />
-        <WorkflowControls projectId={projectId} />
+        <WorkflowControls projectId={projectId} awareness={awareness} />
+        {awareness && (
+          <CursorOverlay
+            remoteUsers={awareness.remoteUsers}
+            reactFlowInstance={reactFlowInstance.current}
+          />
+        )}
       </ReactFlow>
     </div>
   );

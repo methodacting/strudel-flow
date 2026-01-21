@@ -24,11 +24,12 @@ export const realtimeRouter = new Hono<{
 	const { id: projectId } = c.req.valid("param");
 
 	const service = new ProjectService(c.env);
-	const access = await service.checkAccess(projectId, user.id);
-	if (!access.allowed) {
+	const accessResult = await service.checkAccess(projectId, user.id);
+	if (accessResult.isErr() || !accessResult.value.allowed) {
 		return c.json({ error: "Forbidden" }, 403);
 	}
 
+	const access = accessResult.value;
 	// Generate unique client ID for this connection
 	const clientId = nanoid();
 	const userName = user?.name || "Anonymous";

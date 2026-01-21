@@ -21,7 +21,7 @@ export function useUrlStateLoader() {
     const urlState = loadStateFromUrl();
 
     if (urlState) {
-      console.log('🔄 Loading state from URL:', {
+      console.debug('🔄 Loading state from URL:', {
         theme: urlState.theme,
         colorMode: urlState.colorMode,
         nodeCount: urlState.nodes.length,

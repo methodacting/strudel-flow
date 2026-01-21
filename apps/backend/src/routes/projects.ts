@@ -7,6 +7,7 @@ import type { AppBindings, AppVariables } from "../types/hono";
 import { db } from "../db";
 import * as schema from "@strudel-flow/db/schema";
 import { eq } from "drizzle-orm";
+import { resultToResponse } from "../errors/hono";
 
 export const projectRouter = new Hono<{
 	Bindings: AppBindings;
@@ -16,9 +17,13 @@ export const projectRouter = new Hono<{
 	.get("/projects", async (c) => {
 	const user = c.get("user");
 	const service = new ProjectService(c.env);
-	const projects = await service.listProjects(user.id);
+	const projectsResult = await service.listProjects(user.id);
 
-	return c.json({ projects });
+	if (projectsResult.isErr()) {
+		return c.json({ error: "Failed to fetch projects" }, 500);
+	}
+
+	return c.json({ projects: projectsResult.value });
 })
 	.post(
 		"/projects",
@@ -41,26 +46,27 @@ export const projectRouter = new Hono<{
 	const resolvedOrganizationId = organizationId ?? activeOrganizationId;
 
 	const service = new ProjectService(c.env);
+	const projectResult = await service.createProject(
+		user.id,
+		name,
+		resolvedOrganizationId,
+	);
 
-	try {
-		const project = await service.createProject(
-			user.id,
+	if (projectResult.isErr()) {
+		console.error("[projects] create failed", {
+			userId: user.id,
 			name,
-			resolvedOrganizationId,
-		);
-		return c.json({ project });
-	} catch (error) {
-			console.error("[projects] create failed", {
-				userId: user.id,
-				name,
-				organizationId: resolvedOrganizationId,
-				error,
-			});
-		if (error instanceof Error && error.message.includes("organization")) {
+			organizationId: resolvedOrganizationId,
+			error: projectResult.error,
+		});
+		const error = projectResult.error;
+		if (error.message.includes("organization")) {
 			return c.json({ error: error.message }, 403);
 		}
 		return c.json({ error: "Failed to create project" }, 500);
 	}
+
+	return c.json({ project: projectResult.value });
 	})
 	.get(
 		"/projects/:id",
@@ -75,18 +81,20 @@ export const projectRouter = new Hono<{
 	const { id: projectId } = c.req.valid("param");
 
 	const service = new ProjectService(c.env);
-	const project = await service.getProject(projectId);
+	const projectResult = await service.getProject(projectId);
 
-	if (!project) {
+	if (projectResult.isErr() || !projectResult.value) {
 		return c.json({ error: "Project not found" }, 404);
 	}
 
-	const access = await service.checkAccess(projectId, user.id);
+	const project = projectResult.value;
+	const accessResult = await service.checkAccess(projectId, user.id);
 
-	if (!access.allowed) {
+	if (accessResult.isErr() || !accessResult.value.allowed) {
 		return c.json({ error: "Forbidden" }, 403);
 	}
 
+	const access = accessResult.value;
 	return c.json({ project: { ...project, accessRole: access.role } });
 	})
 	.put(
@@ -109,15 +117,23 @@ export const projectRouter = new Hono<{
 	const updates = c.req.valid("json");
 
 	const service = new ProjectService(c.env);
-	const access = await service.checkAccess(projectId, user.id);
+	const accessResult = await service.checkAccess(projectId, user.id);
 
-	if (!access.allowed || (access.role !== "owner" && access.role !== "editor")) {
+	if (
+		accessResult.isErr() ||
+		!accessResult.value.allowed ||
+		(accessResult.value.role !== "owner" && accessResult.value.role !== "editor")
+	) {
 		return c.json({ error: "Forbidden" }, 403);
 	}
 
-	const project = await service.updateProject(projectId, updates);
+	const projectResult = await service.updateProject(projectId, updates);
 
-	return c.json({ project });
+	if (projectResult.isErr()) {
+		return c.json({ error: "Failed to update project" }, 500);
+	}
+
+	return c.json({ project: projectResult.value });
 	})
 	.delete(
 		"/projects/:id",
@@ -132,13 +148,21 @@ export const projectRouter = new Hono<{
 	const { id: projectId } = c.req.valid("param");
 
 	const service = new ProjectService(c.env);
-	const access = await service.checkAccess(projectId, user.id);
+	const accessResult = await service.checkAccess(projectId, user.id);
 
-	if (!access.allowed || access.role === "viewer") {
+	if (
+		accessResult.isErr() ||
+		!accessResult.value.allowed ||
+		accessResult.value.role === "viewer"
+	) {
 		return c.json({ error: "Forbidden" }, 403);
 	}
 
-	await service.deleteProject(projectId);
+	const deleteResult = await service.deleteProject(projectId);
+
+	if (deleteResult.isErr()) {
+		return c.json({ error: "Failed to delete project" }, 500);
+	}
 
 	return c.json({ success: true });
 	})
@@ -162,17 +186,26 @@ export const projectRouter = new Hono<{
 	const { role = "editor" } = c.req.valid("json");
 
 	const service = new ProjectService(c.env);
-	const access = await service.checkAccess(projectId, user.id);
+	const accessResult = await service.checkAccess(projectId, user.id);
 
-	if (!access.allowed || access.role !== "owner") {
+	if (accessResult.isErr() || !accessResult.value.allowed || accessResult.value.role !== "owner") {
 		return c.json({ error: "Forbidden" }, 403);
 	}
 
-			const token = await service.createInvite(projectId, user.id, role);
-			const origin = c.req.header("origin") || new URL(c.req.url).origin;
-			const inviteUrl = `${origin}/project/join/${token}`;
+	const tokenResult = await service.createInvite(projectId, user.id, role);
 
-			return c.json({ inviteUrl });
+	if (tokenResult.isErr()) {
+		return c.json({ error: "Failed to create invite" }, 500);
+	}
+
+	const token = tokenResult.value;
+	const origin =
+		c.env.FRONTEND_URL ||
+		c.req.header("origin") ||
+		new URL(c.req.url).origin;
+	const inviteUrl = `${origin}/api/projects/join/${token}`;
+
+	return c.json({ inviteUrl });
 	})
 	.get(
 		"/projects/:id/invites",
@@ -187,19 +220,27 @@ export const projectRouter = new Hono<{
 			const { id: projectId } = c.req.valid("param");
 
 			const service = new ProjectService(c.env);
-			const access = await service.checkAccess(projectId, user.id);
+			const accessResult = await service.checkAccess(projectId, user.id);
 
-			if (!access.allowed || access.role !== "owner") {
+			if (accessResult.isErr() || !accessResult.value.allowed || accessResult.value.role !== "owner") {
 				return c.json({ error: "Forbidden" }, 403);
 			}
 
-			const invites = await service.listActiveInvites(projectId);
-			const origin = c.req.header("origin") || new URL(c.req.url).origin;
+			const invitesResult = await service.listActiveInvites(projectId);
+
+			if (invitesResult.isErr()) {
+				return c.json({ error: "Failed to fetch invites" }, 500);
+			}
+
+			const origin =
+				c.env.FRONTEND_URL ||
+				c.req.header("origin") ||
+				new URL(c.req.url).origin;
 
 			return c.json({
-				invites: invites.map((invite) => ({
+				invites: invitesResult.value.map((invite) => ({
 					role: invite.role,
-					inviteUrl: `${origin}/project/join/${invite.token}`,
+					inviteUrl: `${origin}/api/projects/join/${invite.token}`,
 					expiresAt: invite.expiresAt,
 				})),
 			});
@@ -219,13 +260,17 @@ export const projectRouter = new Hono<{
 			const { id: projectId, role } = c.req.valid("param");
 
 			const service = new ProjectService(c.env);
-			const access = await service.checkAccess(projectId, user.id);
+			const accessResult = await service.checkAccess(projectId, user.id);
 
-			if (!access.allowed || access.role !== "owner") {
+			if (accessResult.isErr() || !accessResult.value.allowed || accessResult.value.role !== "owner") {
 				return c.json({ error: "Forbidden" }, 403);
 			}
 
-			await service.revokeInvite(projectId, role);
+			const revokeResult = await service.revokeInvite(projectId, role);
+
+			if (revokeResult.isErr()) {
+				return c.json({ error: "Failed to revoke invite" }, 500);
+			}
 
 			return c.json({ success: true });
 		},
@@ -244,12 +289,13 @@ export const projectRouter = new Hono<{
 				const { token } = c.req.valid("param");
 
 				const service = new ProjectService(c.env);
-				const invite = await service.getInviteByToken(token);
+				const inviteResult = await service.getInviteByToken(token);
 
-				if (!invite) {
+				if (inviteResult.isErr() || !inviteResult.value) {
 					return c.json({ error: "Invite not found" }, 404);
 				}
 
+				const invite = inviteResult.value;
 				const now = new Date();
 				if (invite.expiresAt && invite.expiresAt < now) {
 					return c.json({ error: "Invite expired" }, 410);
@@ -259,21 +305,25 @@ export const projectRouter = new Hono<{
 					return c.json({ error: "Invite already used" }, 409);
 				}
 
-				const access = await service.checkAccess(invite.projectId, user.id);
-				if (!access.allowed) {
-					await service.joinProject(invite.projectId, user.id, invite.role);
+				const accessResult = await service.checkAccess(invite.projectId, user.id);
+				if (accessResult.isErr() || !accessResult.value.allowed) {
+					const joinResult = await service.joinProject(invite.projectId, user.id, invite.role);
+					if (joinResult.isErr()) {
+						console.error("[projects] join failed", joinResult.error);
+						return c.json({ error: "Failed to join project" }, 500);
+					}
 					await db(c.env.DB)
 						.update(schema.projectInvite)
 						.set({ uses: invite.uses + 1 })
 						.where(eq(schema.projectInvite.id, invite.id));
 				}
 
-				const project = await service.getProject(invite.projectId);
-				if (!project) {
+				const projectResult = await service.getProject(invite.projectId);
+				if (projectResult.isErr() || !projectResult.value) {
 					return c.json({ error: "Project not found" }, 404);
 				}
 
-				return c.json({ project });
+				return c.json({ project: projectResult.value });
 			} catch (error) {
 				console.error("[projects] join failed", error);
 				return c.json({ error: "Failed to join project" }, 500);

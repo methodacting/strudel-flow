@@ -4,7 +4,7 @@
  */
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "strudel-flow-backend",
+  "name": "strudel-flow-backend-v2",
   "main": "src/index.ts",
   "compatibility_date": "2025-09-27",
   "compatibility_flags": [
@@ -35,7 +35,7 @@
     "bindings": [
       {
         "name": "Y_DURABLE_OBJECTS",
-        "class_name": "YDurableObjects"
+        "class_name": "YDurableObjectsV2"
       }
     ]
   },
@@ -45,20 +45,34 @@
       "new_classes": [
         "YDurableObjects"
       ]
+    },
+    {
+      "tag": "v2"
+    },
+    {
+      "tag": "v3",
+      "renamed_classes": [
+        {
+          "from": "YDurableObjects",
+          "to": "YDurableObjectsV2"
+        }
+      ]
     }
   ],
   "observability": {
     "enabled": true
   },
+  /*
   "vars": {
     "BETTER_AUTH_SECRET": "dev-secret-change-in-production",
-    "BETTER_AUTH_URL": "https://strudel-flow-backend.snilan.workers.dev",
+    "BETTER_AUTH_URL": "https://strudel.methodactor.workers.dev",
     "FRONTEND_URL": "",
     "GOOGLE_CLIENT_ID": "your-google-client-id",
     "GOOGLE_CLIENT_SECRET": "your-google-client-secret",
     "GITHUB_CLIENT_ID": "your-github-client-id",
     "GITHUB_CLIENT_SECRET": "your-github-client-secret"
   },
+  */
   "dev": {
     "port": 8788
   }

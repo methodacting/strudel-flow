@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { hc } from "hono/client";
 import {
-	YDurableObjects,
+	YDurableObjects as BaseYDurableObjects,
 	type YDurableObjectsAppType,
 } from "y-durableobjects";
 import { upgrade } from "y-durableobjects/helpers/upgrade";
@@ -29,9 +29,9 @@ export const yjsRouter = new Hono<{
 			const user = c.get("user");
 			const { id } = c.req.valid("param");
 			const service = new ProjectService(c.env);
-			const access = await service.checkAccess(id, user.id);
+			const accessResult = await service.checkAccess(id, user.id);
 
-			if (!access.allowed) {
+			if (accessResult.isErr() || !accessResult.value.allowed) {
 				return c.json({ error: "Forbidden" }, 403);
 			}
 
@@ -57,4 +57,4 @@ export const yjsRouter = new Hono<{
 		},
 	);
 
-export { YDurableObjects };
+export class YDurableObjectsV2 extends BaseYDurableObjects<any> {}

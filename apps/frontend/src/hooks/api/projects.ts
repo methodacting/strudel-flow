@@ -168,6 +168,9 @@ export const useUpdateProjectMutation = () => {
 				);
 			}
 			const data = await response.json();
+			if (!data.project) {
+				throw new Error("Project not found after update");
+			}
 			return data.project;
 		},
 		onSuccess: async (project: Project) => {

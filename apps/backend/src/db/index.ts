@@ -1,13 +1,9 @@
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '@strudel-flow/db/schema';
 
-export function createDb(d1: D1Database) {
-  return drizzle(d1, { schema });
-}
-
 export function db(d1: D1Database) {
   return drizzle(d1, { schema });
 }
 
-export type Database = ReturnType<typeof createDb>;
+export type Database = ReturnType<typeof db>;
 export { schema };

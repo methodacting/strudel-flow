@@ -34,7 +34,12 @@
       "Bash(python3:*)",
       "Bash(git worktree:*)",
       "Bash(tree:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "mcp__better-auth__search",
+      "Bash(pnpm --filter @strudel-flow/backend build:*)",
+      "mcp__docs__search_docs",
+      "mcp__docs__list_libraries",
+      "Bash(pnpm --filter @strudel-flow/backend add:*)"
     ]
   },
   "disabledMcpjsonServers": [

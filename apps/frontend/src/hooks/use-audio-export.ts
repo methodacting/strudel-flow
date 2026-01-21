@@ -175,7 +175,7 @@ export function useAudioExport() {
 					0,
 				);
 				const trimmedDuration = trimmedSamples / result.sampleRate;
-				console.log(
+				console.debug(
 					`Recording complete. Duration: ${trimmedDuration.toFixed(2)}s`,
 				);
 				options.onComplete?.(wavBlob);

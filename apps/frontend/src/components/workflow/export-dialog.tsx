@@ -58,7 +58,7 @@ export function ExportDialog({
 		if (!open) {
 			setCopied(false);
 		}
-		console.log('[ExportDialog] isPaused:', isPaused, 'open:', open);
+		console.debug('[ExportDialog] isPaused:', isPaused, 'open:', open);
 	}, [open, isPaused]);
 
 	const handleExport = async () => {

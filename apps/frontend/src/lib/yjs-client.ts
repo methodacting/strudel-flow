@@ -51,7 +51,7 @@ export function createYjsClient(
 		);
 
 		indexedDBProvider.on("synced", () => {
-			console.log("Yjs state synced to IndexedDB");
+			console.debug("Yjs state synced to IndexedDB");
 		});
 	}
 
@@ -96,7 +96,7 @@ export function createYjsClient(
 	if (nodes.length === 0 && edges.length === 0) {
 		setTimeout(() => {
 				if (!wsProvider.wsconnected && nodes.length === 0) {
-				console.log("No data from IndexedDB, starting fresh");
+				console.debug("No data from IndexedDB, starting fresh");
 			}
 		}, 500);
 	}

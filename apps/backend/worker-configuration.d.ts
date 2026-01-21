@@ -8,7 +8,7 @@ declare namespace Cloudflare {
 	}
 	interface Env {
 		BETTER_AUTH_SECRET: "dev-secret-change-in-production";
-		BETTER_AUTH_URL: "https://strudel-flow-backend.snilan.workers.dev";
+		BETTER_AUTH_URL: "https://strudel.methodactor.workers.dev";
 		FRONTEND_URL: "";
 		GOOGLE_CLIENT_ID: "your-google-client-id";
 		GOOGLE_CLIENT_SECRET: "your-google-client-secret";

@@ -18,21 +18,21 @@ export function useAnonymousSession() {
 	useEffect(() => {
 		const initAnonymous = async () => {
 			try {
-				console.log("[anon] init start");
+				console.debug("[anon] init start");
 				const sessionResult = (await getSession()) as SessionResult;
-				console.log("[anon] getSession result:", sessionResult);
+				console.debug("[anon] getSession result:", sessionResult);
 				const session = getSessionData(sessionResult);
-				console.log("[anon] normalized session:", session);
+				console.debug("[anon] normalized session:", session);
 				if (!session) {
-					console.log("[anon] no session, signing in anonymously");
+					console.debug("[anon] no session, signing in anonymously");
 					await signInAnonymous();
-					console.log("[anon] signInAnonymous finished");
+					console.debug("[anon] signInAnonymous finished");
 				}
 			} catch (error) {
 				console.error("Failed to initialize session:", error);
 			}
 			setInitialized(true);
-			console.log("[anon] init done");
+			console.debug("[anon] init done");
 		};
 
 		initAnonymous();

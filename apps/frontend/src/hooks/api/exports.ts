@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
-import { ApiStatusError } from "@/lib/api-helpers";
+import { ApiStatusError, getErrorMessage } from "@/lib/api-helpers";
+import { honoClient } from "@/lib/hono-client";
 
 /**
  * Response from the export API endpoint
@@ -32,21 +33,21 @@ export const useCreateExportMutation = () =>
 			formData.append("overwrite", overwrite.toString());
 			formData.append("duration", duration.toString());
 
-			// Using fetch directly for FormData support
-			const response = await fetch(`/api/projects/${projectId}/export`, {
-				method: "POST",
-				body: formData,
-				credentials: "include",
-			});
+			const response = await honoClient.api.projects[":id"].export.$post(
+				{
+					param: { id: projectId },
+					// @ts-expect-error - Hono client accepts FormData but types don't match
+					body: formData,
+				},
+			);
 
 			if (!response.ok) {
-				const errorData = (await response.json()) as { error?: string };
 				throw new ApiStatusError(
-					errorData.error || "Failed to create export",
+					await getErrorMessage(response, "Failed to create export"),
 					response.status,
 				);
 			}
 
-			return response.json();
+			return response.json() as Promise<CreateExportResponse>;
 		},
 	});

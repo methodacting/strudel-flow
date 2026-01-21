@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "@tanstack/react-router";
 import { Play, Pause, Download, Home, Loader2, Check, Copy } from "lucide-react";
 import { Button } from "./ui/button";
+import { honoClient } from "@/lib/hono-client";
+import { ApiStatusError, getErrorMessage } from "@/lib/api-helpers";
 
 export function SharedAudioPage() {
 	const { exportId } = useParams({ from: "/audio/$exportId" });
@@ -21,13 +23,19 @@ export function SharedAudioPage() {
 			setIsLoading(true);
 			setError(null);
 			try {
-				// Fetch the audio file from the API
-				const response = await fetch(`/api/audio/${exportId}`);
+				// Fetch the audio file from the API using Hono client
+				const response = await honoClient.api.audio[":exportId"].$get({
+					param: { exportId },
+				});
+
 				if (!response.ok) {
 					if (response.status === 404) {
 						throw new Error("Audio not found");
 					}
-					throw new Error("Failed to load audio");
+					throw new ApiStatusError(
+						await getErrorMessage(response, "Failed to load audio"),
+						response.status,
+					);
 				}
 
 				const blob = await response.blob();

@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { anonymous, organization } from "better-auth/plugins";
 
-import { createDb } from "../db";
+import { db } from "../db";
 import * as schema from "@strudel-flow/db/schema";
 import type { CloudflareBindings } from "../types/bindings";
 
@@ -19,7 +19,7 @@ export function getAuth(
 		| "FRONTEND_URL"
 	>,
 ): ReturnType<typeof betterAuth> {
-	const db = createDb(d1);
+	const database = db(d1);
 	const baseOrigin = new URL(env.BETTER_AUTH_URL).origin;
 	const trustedOrigins = [
 		"http://localhost:5173",
@@ -34,7 +34,7 @@ export function getAuth(
 		baseURL: env.BETTER_AUTH_URL,
 		basePath: "/auth",
 		trustedOrigins,
-		database: drizzleAdapter(db, {
+		database: drizzleAdapter(database, {
 			provider: "sqlite",
 			schema,
 		} as any),

@@ -1,13 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
-import { Outlet, RouterProvider, createRootRoute, createRoute, createRouter, useParams, useNavigate } from "@tanstack/react-router";
-import { ApiStatusError } from "@/lib/api-helpers";
-import { useProjectQuery, useJoinProjectMutation } from "@/hooks/api/projects";
-import { useEffect, useRef, useState } from "react";
+import { Outlet, RouterProvider, createRootRoute, createRoute, createRouter, useParams } from "@tanstack/react-router";
+import { useProjectQuery } from "@/hooks/api/projects";
 import { useAnonymousSession } from "./hooks/use-anonymous-session";
 import { ProjectEditor, ProjectManager } from "./app";
 import { useSessionContext } from "./contexts/session-context";
 import { SessionProvider } from "./contexts/session-provider";
-import { Button } from "./components/ui/button";
 import { SharedAudioPage } from "./components/shared-audio-page";
 
 const rootRoute = createRootRoute({
@@ -66,128 +63,13 @@ const projectRoute = createRoute({
 	},
 });
 
-const joinRoute = createRoute({
-	getParentRoute: () => rootRoute,
-	path: "/project/join/$token",
-	component: function JoinRoute() {
-		const { sessionReady } = useSessionContext();
-		const { token } = useParams({ from: "/project/join/$token" });
-		const [error, setError] = useState<{
-			title: string;
-			description: string;
-		} | null>(null);
-		const attemptedJoinRef = useRef(false);
-		const joinProject = useJoinProjectMutation();
-		const navigate = useNavigate();
-
-		useEffect(() => {
-			let cancelled = false;
-			const controller = new AbortController();
-			if (!sessionReady) return;
-			if (attemptedJoinRef.current) return;
-			attemptedJoinRef.current = true;
-
-			void (async () => {
-				try {
-					const project = await joinProject.mutateAsync({
-						token,
-						signal: controller.signal,
-					});
-					if (!cancelled) {
-						navigate({
-							to: "/project/$projectId",
-							params: { projectId: project.id },
-							replace: true,
-						});
-					}
-				} catch (err) {
-					if (!cancelled) {
-						if (err instanceof ApiStatusError) {
-							if (err.status === 410) {
-								setError({
-									title: "Invite expired",
-									description:
-										"This invite link is no longer valid. Ask the owner to generate a new one.",
-								});
-							} else if (err.status === 409) {
-								setError({
-									title: "Invite already used",
-									description:
-										"This invite link has already been used. Ask the owner for a new link.",
-								});
-							} else if (err.status === 404) {
-								setError({
-									title: "Invite not found",
-									description:
-										"This invite link doesn’t exist or was removed. Check the URL or ask for a new link.",
-								});
-							} else {
-								setError({
-									title: "Unable to join",
-									description: err.message || "Failed to join project.",
-								});
-							}
-						} else {
-							setError({
-								title: "Unable to join",
-								description:
-									err instanceof Error ? err.message : "Failed to join project.",
-							});
-						}
-					}
-				}
-			})();
-
-			return () => {
-				cancelled = true;
-				controller.abort();
-			};
-		}, [joinProject, navigate, sessionReady, token]);
-
-		return (
-			<div className="flex min-h-screen items-center justify-center bg-background px-6">
-				<div className="w-full max-w-md rounded-xl border bg-card p-6 shadow-sm">
-					{error ? (
-						<div className="space-y-3">
-							<div>
-								<h2 className="text-lg font-semibold">{error.title}</h2>
-								<p className="text-sm text-muted-foreground">
-									{error.description}
-								</p>
-							</div>
-							<div className="flex gap-2">
-								<Button onClick={() => navigate({ to: "/" })}>
-									Back to projects
-								</Button>
-								<Button
-									variant="secondary"
-									onClick={() => window.location.reload()}
-								>
-									Try again
-								</Button>
-							</div>
-						</div>
-					) : (
-						<div className="space-y-2">
-							<h2 className="text-lg font-semibold">Joining project</h2>
-							<p className="text-sm text-muted-foreground">
-								Just a moment while we verify your invite…
-							</p>
-						</div>
-					)}
-				</div>
-			</div>
-		);
-	},
-});
-
 const audioShareRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/audio/$exportId",
 	component: SharedAudioPage,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, projectRoute, joinRoute, audioShareRoute]);
+const routeTree = rootRoute.addChildren([indexRoute, projectRoute, audioShareRoute]);
 
 export const router = createRouter({
 	routeTree,

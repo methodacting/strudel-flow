@@ -53,3 +53,8 @@ coverage/**
 # END Ruler Generated Files
 .worktrees/
 strudel/
+
+.secrets.json
+.env
+.env.local
+.env.*.local
