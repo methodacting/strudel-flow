@@ -7,10 +7,12 @@ import WorkflowEditor from "./components/editor";
 import SidebarLayout from "./components/layouts/sidebar-layout";
 import type { Project } from "./types/project";
 import { ShareUrlPopover } from "./components/share-url-popover";
+import { useSessionContext } from "./contexts/session-context";
 
 export function ProjectManager({ sessionReady }: { sessionReady: boolean }) {
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 	const navigate = useNavigate();
+	const { isAuthenticated } = useSessionContext();
 
 	const handleCreateProject = () => {
 		setCreateDialogOpen(true);
@@ -35,6 +37,7 @@ export function ProjectManager({ sessionReady }: { sessionReady: boolean }) {
 					onCreate={handleCreateProject}
 					onSelect={handleSelectProject}
 					sessionReady={sessionReady}
+					isAuthenticated={isAuthenticated}
 				/>
 			</main>
 
@@ -59,6 +62,7 @@ export function ProjectEditor({
 }) {
 	const [, setSelectedProject] = useState<Project | null>(null);
 	const navigate = useNavigate();
+	const { isAuthenticated } = useSessionContext();
 
 	return (
 		<SidebarLayout>
@@ -77,8 +81,8 @@ export function ProjectEditor({
 					</button>
 				</div>
 				<div className="flex items-center gap-2">
-					{accessRole === "owner" && (
-						<ShareUrlPopover projectId={projectId} />
+					{isAuthenticated && accessRole === "owner" && (
+						<ShareUrlPopover projectId={projectId} isAuthenticated={isAuthenticated} />
 					)}
 					<UserMenu sessionReady={sessionReady} />
 				</div>

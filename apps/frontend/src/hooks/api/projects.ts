@@ -4,7 +4,9 @@ import { honoClient } from "@/lib/hono-client";
 import { ApiStatusError, getErrorMessage } from "@/lib/api-helpers";
 import { queryKeys } from "@/lib/query-keys";
 import { indexedDB } from "@/lib/indexeddb";
+import { getProjectScope } from "@/lib/project-scope";
 import type { Project } from "@/types/project";
+import { nanoid } from "nanoid";
 
 const withSignal = (signal?: AbortSignal) =>
 	signal ? { init: { signal } } : undefined;
@@ -18,13 +20,21 @@ const toAccessRole = (
 	return undefined;
 };
 
-export const useProjectsQuery = (enabled: boolean) => {
+export const useProjectsQuery = (
+	enabled: boolean,
+	isAuthenticated: boolean,
+	userId?: string | null,
+) => {
+	const scope = getProjectScope(userId ?? null);
 	const query = useQuery<Project[], ApiStatusError>({
-		queryKey: queryKeys.projects,
+		queryKey: isAuthenticated ? queryKeys.projects : queryKeys.localProjects(scope),
 		enabled,
 		refetchOnMount: "always",
 		refetchOnWindowFocus: true,
 		queryFn: async ({ signal }) => {
+			if (!isAuthenticated) {
+				return indexedDB.projects.getAll(scope);
+			}
 			const response = await honoClient.api.projects.$get(
 				{},
 				withSignal(signal),
@@ -45,21 +55,41 @@ export const useProjectsQuery = (enabled: boolean) => {
 		if (!projects) return;
 		void (async () => {
 			try {
-				await indexedDB.projects.setMany(projects);
+				if (isAuthenticated) {
+					await indexedDB.projects.setMany(projects, scope);
+				}
 			} catch (error) {
 				console.warn("Failed to persist projects to IndexedDB", error);
 			}
 		})();
-	}, [query.data]);
+	}, [isAuthenticated, query.data, scope]);
 
 	return query;
 };
 
-export const useProjectQuery = (projectId: string, enabled: boolean) =>
-	useQuery<Project, ApiStatusError>({
-		queryKey: queryKeys.project(projectId),
+export const useProjectQuery = (
+	projectId: string,
+	enabled: boolean,
+	isAuthenticated: boolean,
+	userId?: string | null,
+) => {
+	const scope = getProjectScope(userId ?? null);
+	return useQuery<Project, ApiStatusError>({
+		queryKey: isAuthenticated
+			? queryKeys.project(projectId)
+			: queryKeys.localProject(projectId, scope),
 		enabled,
 		queryFn: async ({ signal }) => {
+			if (!isAuthenticated) {
+				const localProject = await indexedDB.projects.get(projectId, scope);
+				if (!localProject) {
+					throw new ApiStatusError("Project not found", 404);
+				}
+				return {
+					...localProject,
+					accessRole: localProject.accessRole ?? "owner",
+				};
+			}
 			const response = await honoClient.api.projects[":id"].$get(
 				{ param: { id: projectId } },
 				withSignal(signal),
@@ -78,6 +108,7 @@ export const useProjectQuery = (projectId: string, enabled: boolean) =>
 			};
 		},
 	});
+};
 
 export type ProjectInvite = {
 	role: "viewer" | "editor";
@@ -90,12 +121,16 @@ const toInviteRole = (role: string | null | undefined): ProjectInvite["role"] =>
 
 export const useProjectInvitesQuery = (
 	projectId: string,
+	isAuthenticated: boolean,
 	enabled: boolean,
 ) =>
 	useQuery<ProjectInvite[], ApiStatusError>({
 		queryKey: queryKeys.projectInvites(projectId),
-		enabled,
+		enabled: enabled && isAuthenticated,
 		queryFn: async ({ signal }) => {
+			if (!isAuthenticated) {
+				return [];
+			}
 			const response = await honoClient.api.projects[":id"].invites.$get(
 				{ param: { id: projectId } },
 				withSignal(signal),
@@ -126,11 +161,28 @@ export const useProjectInvitesQuery = (
 		},
 	});
 
-export const useCreateProjectMutation = () => {
+export const useCreateProjectMutation = (
+	isAuthenticated: boolean,
+	userId?: string | null,
+) => {
 	const queryClient = useQueryClient();
+	const scope = getProjectScope(userId ?? null);
 
 	return useMutation({
 		mutationFn: async (payload: { name: string; organizationId?: string }) => {
+			if (!isAuthenticated) {
+				const now = new Date().toISOString();
+				const localProject: Project = {
+					id: nanoid(),
+					name: payload.name,
+					createdAt: now,
+					updatedAt: now,
+					organizationId: payload.organizationId ?? null,
+					accessRole: "owner",
+				};
+				await indexedDB.projects.add(localProject, scope);
+				return localProject;
+			}
 			const response = await honoClient.api.projects.$post({
 				json: payload.organizationId
 					? { name: payload.name, organizationId: payload.organizationId }
@@ -146,17 +198,38 @@ export const useCreateProjectMutation = () => {
 			return data.project;
 		},
 		onSuccess: async (project: Project) => {
-			await indexedDB.projects.add(project);
-			queryClient.invalidateQueries({ queryKey: queryKeys.projects });
+			if (isAuthenticated) {
+				await indexedDB.projects.add(project, scope);
+				queryClient.invalidateQueries({ queryKey: queryKeys.projects });
+			} else {
+				queryClient.invalidateQueries({ queryKey: queryKeys.localProjects(scope) });
+			}
 		},
 	});
 };
 
-export const useUpdateProjectMutation = () => {
+export const useUpdateProjectMutation = (
+	isAuthenticated: boolean,
+	userId?: string | null,
+) => {
 	const queryClient = useQueryClient();
+	const scope = getProjectScope(userId ?? null);
 
 	return useMutation({
 		mutationFn: async (payload: { id: string; name?: string }) => {
+			if (!isAuthenticated) {
+				const project = await indexedDB.projects.get(payload.id, scope);
+				if (!project) {
+					throw new Error("Project not found after update");
+				}
+				const updated: Project = {
+					...project,
+					name: payload.name ?? project.name,
+					updatedAt: new Date().toISOString(),
+				};
+				await indexedDB.projects.update(updated, scope);
+				return updated;
+			}
 			const response = await honoClient.api.projects[":id"].$put({
 				param: { id: payload.id },
 				json: { name: payload.name },
@@ -174,17 +247,29 @@ export const useUpdateProjectMutation = () => {
 			return data.project;
 		},
 		onSuccess: async (project: Project) => {
-			await indexedDB.projects.update(project);
-			queryClient.invalidateQueries({ queryKey: queryKeys.projects });
+			if (isAuthenticated) {
+				await indexedDB.projects.update(project, scope);
+				queryClient.invalidateQueries({ queryKey: queryKeys.projects });
+			} else {
+				queryClient.invalidateQueries({ queryKey: queryKeys.localProjects(scope) });
+			}
 		},
 	});
 };
 
-export const useDeleteProjectMutation = () => {
+export const useDeleteProjectMutation = (
+	isAuthenticated: boolean,
+	userId?: string | null,
+) => {
 	const queryClient = useQueryClient();
+	const scope = getProjectScope(userId ?? null);
 
 	return useMutation({
 		mutationFn: async (projectId: string) => {
+			if (!isAuthenticated) {
+				await indexedDB.projects.delete(projectId, scope);
+				return { success: true };
+			}
 			const response = await honoClient.api.projects[":id"].$delete({
 				param: { id: projectId },
 			});
@@ -197,8 +282,12 @@ export const useDeleteProjectMutation = () => {
 			return response.json();
 		},
 		onSuccess: async (_result, projectId) => {
-			await indexedDB.projects.delete(projectId);
-			queryClient.invalidateQueries({ queryKey: queryKeys.projects });
+			if (isAuthenticated) {
+				await indexedDB.projects.delete(projectId, scope);
+				queryClient.invalidateQueries({ queryKey: queryKeys.projects });
+			} else {
+				queryClient.invalidateQueries({ queryKey: queryKeys.localProjects(scope) });
+			}
 		},
 	});
 };
@@ -222,13 +311,16 @@ export const useJoinProjectMutation = () =>
 		},
 	});
 
-export const useCreateInviteMutation = () =>
+export const useCreateInviteMutation = (isAuthenticated: boolean) =>
 	useMutation({
 		mutationFn: async (payload: {
 			projectId: string;
 			role: "viewer" | "editor";
 			signal?: AbortSignal;
 		}) => {
+			if (!isAuthenticated) {
+				throw new ApiStatusError("Authentication required", 401);
+			}
 			const response = await honoClient.api.projects[":id"].invite.$post(
 				{
 					param: { id: payload.projectId },
@@ -246,13 +338,16 @@ export const useCreateInviteMutation = () =>
 		},
 	});
 
-export const useRevokeInviteMutation = () =>
+export const useRevokeInviteMutation = (isAuthenticated: boolean) =>
 	useMutation({
 		mutationFn: async (payload: {
 			projectId: string;
 			role: "viewer" | "editor";
 			signal?: AbortSignal;
 		}) => {
+			if (!isAuthenticated) {
+				throw new ApiStatusError("Authentication required", 401);
+			}
 			const response = await honoClient.api.projects[":id"].invite[":role"].$delete(
 				{ param: { id: payload.projectId, role: payload.role } },
 				withSignal(payload.signal),

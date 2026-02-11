@@ -26,14 +26,14 @@ const roleHelp: Record<InviteRole, string> = {
 	editor: "Full editing access.",
 };
 
-export function ShareUrlPopover({ projectId }: { projectId: string }) {
+export function ShareUrlPopover({ projectId, isAuthenticated }: { projectId: string; isAuthenticated: boolean }) {
 	const [copiedRole, setCopiedRole] = useState<InviteRole | null>(null);
 	const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [pendingRole, setPendingRole] = useState<InviteRole | null>(null);
-	const createInvite = useCreateInviteMutation();
-	const revokeInvite = useRevokeInviteMutation();
-	const invitesQuery = useProjectInvitesQuery(projectId, isPopoverOpen);
+	const createInvite = useCreateInviteMutation(isAuthenticated);
+	const revokeInvite = useRevokeInviteMutation(isAuthenticated);
+	const invitesQuery = useProjectInvitesQuery(projectId, isAuthenticated, isPopoverOpen);
 
 	const invitesByRole = useMemo(() => {
 		const invites = (invitesQuery.data ?? []) as ProjectInvite[];
