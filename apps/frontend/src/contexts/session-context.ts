@@ -1,7 +1,10 @@
 import { createContext, useContext } from "react";
+import type { Session } from "@/lib/auth";
 
 export type SessionContextValue = {
 	sessionReady: boolean;
+	session: Session | null;
+	isAuthenticated: boolean;
 };
 
 export const SessionContext = createContext<SessionContextValue | null>(null);
