@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import type { ReactFlowInstance } from "@xyflow/react";
+import type { Edge, ReactFlowInstance } from "@xyflow/react";
 import type { AwarenessState } from "@/lib/awareness";
 import { getUserData } from "@/lib/awareness-utils";
 import { cn } from "@/lib/utils";
+import type { AppNode } from "@/components/nodes";
 
 interface CursorOverlayProps {
 	remoteUsers: AwarenessState[];
-	reactFlowInstance: ReactFlowInstance | null;
+	reactFlowInstance: ReactFlowInstance<AppNode, Edge> | null;
 }
 
 /**

@@ -22,7 +22,7 @@ interface ExportDialogProps {
 	onReset?: () => void; // Callback to reset export result
 	isExporting?: boolean;
 	exportResult?: {
-		shareUrl: string;
+		shareUrl?: string;
 		audioUrl: string;
 		exportId: string;
 	} | null;

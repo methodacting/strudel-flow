@@ -14,40 +14,36 @@ let dbPromise: Promise<IDBPDatabase> | null = null;
 
 export function getDB() {
 	if (!dbPromise) {
-			dbPromise = openDB(DB_NAME, DB_VERSION, {
-				upgrade(db, oldVersion) {
-					let store: IDBObjectStore;
-					if (!db.objectStoreNames.contains(STORE_PROJECTS)) {
-						store = db.createObjectStore(STORE_PROJECTS, {
-							keyPath: "id",
-						});
-						store.createIndex("createdAt", "createdAt");
-						store.createIndex("updatedAt", "updatedAt");
-					} else {
-						const tx = db.transaction(STORE_PROJECTS, "readwrite");
-						store = tx.objectStore(STORE_PROJECTS);
-					}
+		dbPromise = openDB(DB_NAME, DB_VERSION, {
+			async upgrade(db, oldVersion, _newVersion, transaction) {
+				const store = db.objectStoreNames.contains(STORE_PROJECTS)
+					? transaction.objectStore(STORE_PROJECTS)
+					: db.createObjectStore(STORE_PROJECTS, { keyPath: "id" });
 
-					if (!store.indexNames.contains("ownerScope")) {
-						store.createIndex("ownerScope", "ownerScope");
-					}
+				if (!store.indexNames.contains("createdAt")) {
+					store.createIndex("createdAt", "createdAt");
+				}
+				if (!store.indexNames.contains("updatedAt")) {
+					store.createIndex("updatedAt", "updatedAt");
+				}
+				if (!store.indexNames.contains("ownerScope")) {
+					store.createIndex("ownerScope", "ownerScope");
+				}
 
-					if (oldVersion < 3) {
-						const request = store.openCursor();
-						request.onsuccess = () => {
-							const cursor = request.result;
-							if (!cursor) return;
-							const value = cursor.value as StoredProject;
-							if (!value.ownerScope) {
-								cursor.update({ ...value, ownerScope: "anon" });
-							}
-							cursor.continue();
-						};
+				if (oldVersion < 3) {
+					let cursor = await store.openCursor();
+					while (cursor) {
+						const value = cursor.value as StoredProject;
+						if (!value.ownerScope) {
+							await cursor.update({ ...value, ownerScope: "anon" });
+						}
+						cursor = await cursor.continue();
 					}
-				},
-			});
-		}
-		return dbPromise;
+				}
+			},
+		});
+	}
+	return dbPromise;
 }
 
 export const indexedDB = {

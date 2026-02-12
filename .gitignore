@@ -36,18 +36,14 @@ coverage/**
 
 
 # START Ruler Generated Files
-/.codex/config.json
-/.codex/config.json.bak
 /.codex/config.toml
 /.codex/config.toml.bak
-/.cursor/mcp.json
-/.cursor/mcp.json.bak
-/.mcp.json
-/.mcp.json.bak
 /AGENTS.md
 /AGENTS.md.bak
 /CLAUDE.md
 /CLAUDE.md.bak
+/GEMINI.md
+/GEMINI.md.bak
 /opencode.json
 /opencode.json.bak
 # END Ruler Generated Files
@@ -58,3 +54,4 @@ strudel/
 .env
 .env.local
 .env.*.local
+.mcp.json

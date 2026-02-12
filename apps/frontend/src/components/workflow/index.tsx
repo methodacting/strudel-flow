@@ -1,4 +1,5 @@
 import { Background, ReactFlow } from '@xyflow/react';
+import type { Edge, ReactFlowInstance } from '@xyflow/react';
 import { useShallow } from 'zustand/react/shallow';
 import { useCallback, useRef } from 'react';
 
@@ -11,6 +12,7 @@ import { useDragAndDrop } from './useDragAndDrop';
 import { useGlobalPlayback } from '@/hooks/use-global-playback';
 import { useThemeCss } from '@/hooks/use-theme-css';
 import type { UseYjsSyncResult } from '@/hooks/use-yjs-sync';
+import type { AppNode } from '@/components/nodes';
 
 type WorkflowProps = {
   projectId: string;
@@ -22,7 +24,7 @@ type WorkflowProps = {
 export default function Workflow({ projectId, isReadOnly, awareness, isAuthenticated }: WorkflowProps) {
   useGlobalPlayback(); // Enable global spacebar pause/play
 
-  const reactFlowInstance = useRef<any>(null);
+  const reactFlowInstance = useRef<ReactFlowInstance<AppNode, Edge> | null>(null);
 
   const {
     nodes,

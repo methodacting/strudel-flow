@@ -22,10 +22,6 @@
     "composite": true
   },
   "include": ["src"],
-  "paths": {
-    "@/*": ["./src/*"],
-    "@/lib/*": ["./lib/*"]
-  },
   "references": [
     { "path": "../../packages/types" },
     { "path": "../backend" },

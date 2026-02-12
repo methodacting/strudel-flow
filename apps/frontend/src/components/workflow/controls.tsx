@@ -253,7 +253,6 @@ export function WorkflowControls({
           exportError={exportError}
           isPaused={isGloballyPaused}
           levels={levels}
-          isAuthenticated={isAuthenticated}
         />
       </>
     );
@@ -306,7 +305,6 @@ export function WorkflowControls({
         exportError={exportError}
         isPaused={isGloballyPaused}
         levels={levels}
-        isAuthenticated={isAuthenticated}
       />
     </>
   );

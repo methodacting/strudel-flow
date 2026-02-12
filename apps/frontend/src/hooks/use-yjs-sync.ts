@@ -46,10 +46,9 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 		if (!projectId) return;
 
 		const setupClient = async () => {
-			if (isAuthenticated && websocketUrl) {
+			if (isAuthenticated && !websocketUrl) {
 				return;
 			}
-		}, [isAuthenticated, projectId]);
 			const client = createYjsClient({
 				projectId,
 				token,
@@ -123,7 +122,7 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 		}
 
 		clientRef.current.setState(nodes, edges);
-	}, [edges, isReadOnly, nodes]);
+	}, [edges, isAuthenticated, isReadOnly, nodes]);
 
 	// Expose awareness manager
 	const updateCursor = useCallback((x: number, y: number) => {
