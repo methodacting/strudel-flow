@@ -9,26 +9,6 @@ import { getAuth } from "../auth/auth";
 import { db } from "../db";
 import * as schema from "@strudel-flow/db/schema";
 
-const SESSION_COOKIE_NAME = "better-auth.session_token";
-
-const getSetCookieHeaders = (headers: Headers) => {
-	const headersWithSetCookie = headers as Headers & {
-		getSetCookie?: () => string[];
-	};
-	const setCookie = headersWithSetCookie.getSetCookie
-		? headersWithSetCookie.getSetCookie()
-		: headers.get("set-cookie");
-	if (!setCookie) return [];
-	return Array.isArray(setCookie) ? setCookie : [setCookie];
-};
-
-const getCookieValue = (setCookie: string, name: string) => {
-	const cookie = setCookie.split(";")[0] ?? "";
-	const [key, value] = cookie.split("=");
-	if (!key || !value) return null;
-	return key.trim() === name ? value : null;
-};
-
 export const publicProjectRouter = new Hono<{ Bindings: AppBindings }>().get(
 	"/projects/join/:token",
 	zValidator(
@@ -42,34 +22,9 @@ export const publicProjectRouter = new Hono<{ Bindings: AppBindings }>().get(
 			const { token } = c.req.valid("param");
 			const auth = getAuth(c.env.DB, c.env);
 
-			let session = await auth.api.getSession({
+			const session = await auth.api.getSession({
 				headers: c.req.raw.headers,
 			});
-
-			let setCookieHeaders: string[] = [];
-
-			if (!session) {
-				const signInUrl = new URL("/auth/sign-in/anonymous", c.req.url);
-				const response = await auth.handler(
-					new Request(signInUrl.toString(), {
-						method: "POST",
-						headers: c.req.raw.headers,
-					}),
-				);
-
-				setCookieHeaders = getSetCookieHeaders(response.headers);
-				const sessionCookie = setCookieHeaders
-					.map((header) => getCookieValue(header, SESSION_COOKIE_NAME))
-					.find(Boolean);
-
-				if (sessionCookie) {
-					session = await auth.api.getSession({
-						headers: new Headers({
-							cookie: `${SESSION_COOKIE_NAME}=${sessionCookie}`,
-						}),
-					});
-				}
-			}
 
 			if (!session) {
 				return c.json({ error: "Unauthorized" }, 401);
@@ -119,13 +74,7 @@ export const publicProjectRouter = new Hono<{ Bindings: AppBindings }>().get(
 				c.env.FRONTEND_URL ||
 				c.req.header("origin") ||
 				new URL(c.req.url).origin;
-			const response = c.redirect(`${origin}/project/${project.id}`, 302);
-			if (setCookieHeaders.length > 0) {
-				for (const header of setCookieHeaders) {
-					response.headers.append("set-cookie", header);
-				}
-			}
-			return response;
+			return c.redirect(`${origin}/project/${project.id}`, 302);
 		} catch (error) {
 			console.error("[projects] public join failed", error);
 			return c.json({ error: "Failed to join project" }, 500);

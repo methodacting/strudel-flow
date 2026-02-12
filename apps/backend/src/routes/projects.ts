@@ -30,6 +30,7 @@ export const projectRouter = new Hono<{
 		zValidator(
 			"json",
 			z.object({
+				id: z.string().min(1).optional(),
 				name: z.string().min(1).max(100),
 				organizationId: z.string().min(1).optional(),
 			}),
@@ -37,7 +38,7 @@ export const projectRouter = new Hono<{
 		async (c) => {
 	const user = c.get("user");
 	const session = c.get("session");
-	const { name, organizationId } = c.req.valid("json");
+	const { id, name, organizationId } = c.req.valid("json");
 	const activeOrganizationId =
 		session?.session?.activeOrganizationId ??
 		(session as { activeOrganizationId?: string | null } | undefined)
@@ -50,16 +51,21 @@ export const projectRouter = new Hono<{
 		user.id,
 		name,
 		resolvedOrganizationId,
+		id,
 	);
 
 	if (projectResult.isErr()) {
 		console.error("[projects] create failed", {
 			userId: user.id,
+			projectId: id,
 			name,
 			organizationId: resolvedOrganizationId,
 			error: projectResult.error,
 		});
 		const error = projectResult.error;
+		if (error.message.includes("already exists")) {
+			return c.json({ error: error.message }, 409);
+		}
 		if (error.message.includes("organization")) {
 			return c.json({ error: error.message }, 403);
 		}
