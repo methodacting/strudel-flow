@@ -20,7 +20,7 @@ export interface CreateExportVariables {
 	duration: number;
 }
 
-export const useCreateExportMutation = () =>
+export const useCreateExportMutation = (isAuthenticated: boolean) =>
 	useMutation<CreateExportResponse, Error, CreateExportVariables>({
 		mutationFn: async ({
 			projectId,
@@ -28,6 +28,9 @@ export const useCreateExportMutation = () =>
 			overwrite,
 			duration,
 		}) => {
+			if (!isAuthenticated) {
+				throw new Error("Sign in to export audio.");
+			}
 			const formData = new FormData();
 			formData.append("audio", audioBlob);
 			formData.append("overwrite", overwrite.toString());
