@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useYjsSync } from "@/hooks/use-yjs-sync";
 import { useAppStore } from "@/store/app-context";
-import { useSessionQuery } from "@/hooks/api/session";
 import { useSessionContext } from "@/contexts/session-context";
 import Workflow from "./workflow";
 
@@ -16,8 +15,7 @@ export default function WorkflowEditor({
 }: WorkflowEditorProps) {
 	const isReadOnly = accessRole === "viewer";
 	const setIsReadOnly = useAppStore((state) => state.setIsReadOnly);
-	const { sessionReady } = useSessionContext();
-	const { data: session } = useSessionQuery(sessionReady);
+	const { session, isAuthenticated } = useSessionContext();
 
 	useEffect(() => {
 		setIsReadOnly(isReadOnly);
@@ -29,17 +27,19 @@ export default function WorkflowEditor({
 	const yjsSync = useYjsSync({
 		projectId,
 		isReadOnly,
+		isAuthenticated,
 		userId: session?.user?.id,
 		userName: session?.user?.name,
 	});
 
 	return (
 		<div className="w-full h-full">
-			<Workflow
-				projectId={projectId}
-				isReadOnly={isReadOnly}
-				awareness={yjsSync}
-			/>
-		</div>
+		<Workflow
+			projectId={projectId}
+			isReadOnly={isReadOnly}
+			awareness={yjsSync}
+			isAuthenticated={isAuthenticated}
+		/>
+	</div>
 	);
 }

@@ -1,4 +1,3 @@
-import { useSessionQuery } from "@/hooks/api/session";
 import { signInWithGoogle, signInWithGithub, signOut } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +19,7 @@ import {
 	LogOut,
 	Github,
 } from "lucide-react";
+import { useSessionContext } from "@/contexts/session-context";
 
 function AvatarSkeleton() {
 	return (
@@ -28,19 +28,34 @@ function AvatarSkeleton() {
 }
 
 export default function UserMenu({ sessionReady }: { sessionReady: boolean }) {
-	const { data: sessionData, isLoading } = useSessionQuery(sessionReady);
+	const { session } = useSessionContext();
+	const user = session?.user;
 
-	const user = sessionData?.user;
-
-	if (isLoading) {
+	if (!sessionReady) {
 		return <AvatarSkeleton />;
 	}
 
 	if (!user) {
-		return null;
+		return (
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button variant="outline">Sign In</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end" className="w-56">
+					<DropdownMenuLabel>Sign in to sync</DropdownMenuLabel>
+					<DropdownMenuSeparator />
+					<DropdownMenuItem onClick={signInWithGoogle}>
+						<UserPlus className="mr-2 h-4 w-4" />
+						Sign In with Google
+					</DropdownMenuItem>
+					<DropdownMenuItem onClick={signInWithGithub}>
+						<Github className="mr-2 h-4 w-4" />
+						Sign In with GitHub
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
+		);
 	}
-
-	const isAnonymous = user.email?.startsWith("temp-");
 
 	return (
 		<DropdownMenu>
@@ -52,11 +67,6 @@ export default function UserMenu({ sessionReady }: { sessionReady: boolean }) {
 						) : null}
 						<AvatarFallback>{user.name?.charAt(0) || "?"}</AvatarFallback>
 					</Avatar>
-					{isAnonymous && (
-						<span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-							G
-						</span>
-					)}
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" className="w-56">
@@ -64,37 +74,20 @@ export default function UserMenu({ sessionReady }: { sessionReady: boolean }) {
 					<div className="flex flex-col space-y-1">
 						<p className="text-sm font-medium leading-none">{user.name || "Guest User"}</p>
 						<p className="text-xs leading-none text-muted-foreground">
-							{isAnonymous ? "Guest session" : user.email}
+							{user.email}
 						</p>
 					</div>
 				</DropdownMenuLabel>
 				<DropdownMenuSeparator />
-				{isAnonymous ? (
-				<>
-					<DropdownMenuItem onClick={signInWithGoogle}>
-						<UserPlus className="mr-2 h-4 w-4" />
-						Sign In with Google
-					</DropdownMenuItem>
-					<DropdownMenuItem onClick={signInWithGithub}>
-						<Github className="mr-2 h-4 w-4" />
-						Sign In with GitHub
-					</DropdownMenuItem>
-				</>
-				) : (
-					<DropdownMenuItem>
-						<Settings2 className="mr-2 h-4 w-4" />
-						Settings
-					</DropdownMenuItem>
-				)}
-				{!isAnonymous && (
-					<>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem onClick={signOut}>
-							<LogOut className="mr-2 h-4 w-4" />
-							Sign Out
-						</DropdownMenuItem>
-					</>
-				)}
+				<DropdownMenuItem>
+					<Settings2 className="mr-2 h-4 w-4" />
+					Settings
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem onClick={signOut}>
+					<LogOut className="mr-2 h-4 w-4" />
+					Sign Out
+				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);
