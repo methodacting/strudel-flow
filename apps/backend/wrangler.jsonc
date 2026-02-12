@@ -62,11 +62,17 @@
   "observability": {
     "enabled": true
   },
+  "routes": [
+    {
+      "pattern": "strudel.method.actor",
+      "custom_domain": true
+    }
+  ],
   /*
   "vars": {
     "BETTER_AUTH_SECRET": "dev-secret-change-in-production",
-    "BETTER_AUTH_URL": "https://strudel.methodactor.workers.dev",
-    "FRONTEND_URL": "",
+    "BETTER_AUTH_URL": "https://strudel.method.actor",
+    "FRONTEND_URL": "https://strudel.method.actor",
     "GOOGLE_CLIENT_ID": "your-google-client-id",
     "GOOGLE_CLIENT_SECRET": "your-google-client-secret",
     "GITHUB_CLIENT_ID": "your-github-client-id",
