@@ -1,18 +1,26 @@
 /* eslint-disable react-refresh/only-export-components */
 import { Outlet, RouterProvider, createRootRoute, createRoute, createRouter, useParams } from "@tanstack/react-router";
 import { useProjectQuery } from "@/hooks/api/projects";
-import { useAnonymousSession } from "./hooks/use-anonymous-session";
 import { ProjectEditor, ProjectManager } from "./app";
 import { useSessionContext } from "./contexts/session-context";
 import { SessionProvider } from "./contexts/session-provider";
 import { SharedAudioPage } from "./components/shared-audio-page";
+import { useSessionQuery } from "./hooks/api/session";
+import { useLocalProjectMigration } from "./hooks/use-local-project-migration";
 
 const rootRoute = createRootRoute({
 	component: function RootLayout() {
-		const { initialized: sessionReady } = useAnonymousSession();
+		const { data: session, isLoading } = useSessionQuery(true);
+		const sessionReady = !isLoading;
+		const isAuthenticated = Boolean(session?.user?.id);
+		useLocalProjectMigration(session?.user?.id);
 
 		return (
-			<SessionProvider sessionReady={sessionReady}>
+			<SessionProvider
+				sessionReady={sessionReady}
+				session={session ?? null}
+				isAuthenticated={isAuthenticated}
+			>
 				<Outlet />
 			</SessionProvider>
 		);
@@ -32,12 +40,14 @@ const projectRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/project/$projectId",
 	component: function ProjectRoute() {
-		const { sessionReady } = useSessionContext();
+		const { sessionReady, isAuthenticated, session } = useSessionContext();
 		const { projectId } = useParams({ from: "/project/$projectId" });
 
 		const { data: project, isLoading } = useProjectQuery(
 			projectId,
 			sessionReady,
+			isAuthenticated,
+			session?.user?.id,
 		);
 
 		if (!sessionReady || isLoading) {

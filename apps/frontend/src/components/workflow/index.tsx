@@ -16,9 +16,10 @@ type WorkflowProps = {
   projectId: string;
   isReadOnly: boolean;
   awareness?: UseYjsSyncResult;
+  isAuthenticated: boolean;
 };
 
-export default function Workflow({ projectId, isReadOnly, awareness }: WorkflowProps) {
+export default function Workflow({ projectId, isReadOnly, awareness, isAuthenticated }: WorkflowProps) {
   useGlobalPlayback(); // Enable global spacebar pause/play
 
   const reactFlowInstance = useRef<any>(null);
@@ -93,7 +94,11 @@ export default function Workflow({ projectId, isReadOnly, awareness }: WorkflowP
         onMouseMove={handleMouseMove}
       >
         <Background />
-        <WorkflowControls projectId={projectId} awareness={awareness} />
+        <WorkflowControls
+          projectId={projectId}
+          awareness={awareness}
+          isAuthenticated={isAuthenticated}
+        />
         {awareness && (
           <CursorOverlay
             remoteUsers={awareness.remoteUsers}

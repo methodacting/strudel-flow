@@ -14,6 +14,13 @@ import {
 export class ProjectService {
 	constructor(private env: AppBindings) {}
 
+	private getHigherProjectRole(a: string, b: string) {
+		const priority: Record<string, number> = { viewer: 1, editor: 2, owner: 3 };
+		const aRank = priority[a] ?? 0;
+		const bRank = priority[b] ?? 0;
+		return aRank >= bRank ? a : b;
+	}
+
 	async listProjects(
 		userId: string,
 		limit?: number,
@@ -77,10 +84,11 @@ export class ProjectService {
 		userId: string,
 		name: string,
 		organizationId?: string | null,
+		projectId?: string,
 	): Promise<Result<schema.Project, AppError>> {
-		const projectId = nanoid();
 		const now = new Date();
 		const database = db(this.env.DB);
+		const resolvedProjectId = projectId ?? nanoid();
 
 		if (organizationId) {
 			const isMemberResult = await this.isOrganizationMember(userId, organizationId);
@@ -94,11 +102,31 @@ export class ProjectService {
 			}
 		}
 
+		if (projectId) {
+			const existing = await fromDatabase(
+				database
+					.select({ id: schema.project.id })
+					.from(schema.project)
+					.where(eq(schema.project.id, projectId))
+					.limit(1),
+				{ operation: "createProject_checkExisting", projectId },
+			);
+			if (existing.isErr()) {
+				return errors.databaseError(
+					"Failed to verify existing project",
+					existing.error,
+				);
+			}
+			if (existing.value.length > 0) {
+				return errors.resourceAlreadyExists("project");
+			}
+		}
+
 		const project = await fromDatabase(
 			database
 				.insert(schema.project)
 				.values({
-					id: projectId,
+					id: resolvedProjectId,
 					name,
 					ownerId: userId,
 					organizationId: organizationId ?? null,
@@ -106,7 +134,7 @@ export class ProjectService {
 					updatedAt: now,
 				})
 				.returning(),
-			{ operation: "createProject", projectId },
+			{ operation: "createProject", projectId: resolvedProjectId },
 		);
 
 		return project.map((projects) => projects[0]);
@@ -346,5 +374,122 @@ export class ProjectService {
 		);
 
 		return members.map((result) => result.length > 0);
+	}
+
+	async mergeAnonymousUser(
+		anonymousUserId: string,
+		userId: string,
+	): Promise<Result<void, AppError>> {
+		if (anonymousUserId === userId) {
+			return success(undefined);
+		}
+
+		const database = db(this.env.DB);
+		const now = new Date();
+
+		const result = await fromDatabase(
+			database.transaction(async (tx) => {
+				await tx
+					.update(schema.project)
+					.set({ ownerId: userId, updatedAt: now })
+					.where(eq(schema.project.ownerId, anonymousUserId));
+
+				await tx
+					.update(schema.projectInvite)
+					.set({ createdBy: userId })
+					.where(eq(schema.projectInvite.createdBy, anonymousUserId));
+
+				await tx
+					.update(schema.invitation)
+					.set({ inviterId: userId })
+					.where(eq(schema.invitation.inviterId, anonymousUserId));
+
+				const anonOrgMemberships = await tx
+					.select()
+					.from(schema.member)
+					.where(eq(schema.member.userId, anonymousUserId));
+
+				for (const membership of anonOrgMemberships) {
+					const existing = await tx
+						.select()
+						.from(schema.member)
+						.where(
+							and(
+								eq(schema.member.userId, userId),
+								eq(schema.member.organizationId, membership.organizationId),
+							),
+						)
+						.limit(1);
+
+					if (existing.length > 0) {
+						await tx
+							.delete(schema.member)
+							.where(eq(schema.member.id, membership.id));
+					} else {
+						await tx
+							.update(schema.member)
+							.set({ userId })
+							.where(eq(schema.member.id, membership.id));
+					}
+				}
+
+				const anonProjectMemberships = await tx
+					.select()
+					.from(schema.projectMember)
+					.where(eq(schema.projectMember.userId, anonymousUserId));
+
+				for (const membership of anonProjectMemberships) {
+					const existing = await tx
+						.select()
+						.from(schema.projectMember)
+						.where(
+							and(
+								eq(schema.projectMember.userId, userId),
+								eq(schema.projectMember.projectId, membership.projectId),
+							),
+						)
+						.limit(1);
+
+					if (existing.length > 0) {
+						const mergedRole = this.getHigherProjectRole(
+							existing[0].role,
+							membership.role,
+						);
+						if (mergedRole !== existing[0].role) {
+							await tx
+								.update(schema.projectMember)
+								.set({ role: mergedRole })
+								.where(
+									and(
+										eq(schema.projectMember.userId, userId),
+										eq(schema.projectMember.projectId, membership.projectId),
+									),
+								);
+						}
+						await tx
+							.delete(schema.projectMember)
+							.where(
+								and(
+									eq(schema.projectMember.userId, anonymousUserId),
+									eq(schema.projectMember.projectId, membership.projectId),
+								),
+							);
+					} else {
+						await tx
+							.update(schema.projectMember)
+							.set({ userId })
+							.where(
+								and(
+									eq(schema.projectMember.userId, anonymousUserId),
+									eq(schema.projectMember.projectId, membership.projectId),
+								),
+							);
+					}
+				}
+			}),
+			{ operation: "mergeAnonymousUser", anonymousUserId, userId },
+		);
+
+		return result.map(() => undefined);
 	}
 }

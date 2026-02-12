@@ -14,7 +14,7 @@ const allowedOrigins = [
 	"http://127.0.0.1:5173",
 	"https://xyflow.com",
 	"https://app.xyflow.com",
-	"https://strudel.methodactor.workers.dev",
+	"https://strudel.method.actor",
 ];
 const wildcardOrigins = [/^https:\/\/.+\.vercel\.app$/];
 

@@ -1,5 +1,5 @@
 import { createAuthClient } from "better-auth/react";
-import { anonymousClient, organizationClient } from "better-auth/client/plugins";
+import { organizationClient } from "better-auth/client/plugins";
 
 export const VITE_BACKEND_URL =
   import.meta.env.VITE_BACKEND_URL ||
@@ -7,7 +7,7 @@ export const VITE_BACKEND_URL =
 export const client = createAuthClient({
   baseURL: VITE_BACKEND_URL,
   basePath: "/auth",
-  plugins: [anonymousClient(), organizationClient()],
+  plugins: [organizationClient()],
   fetchOptions: {
     credentials: "include",
   },
@@ -19,10 +19,6 @@ export const signInWithGoogle = () => {
 
 export const signInWithGithub = () => {
   return client.signIn.social({ provider: "github" });
-};
-
-export const signInAnonymous = () => {
-  return client.signIn.anonymous();
 };
 
 export const signOut = () => {

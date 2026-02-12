@@ -58,28 +58,29 @@ export function createYjsClient(
 	const websocketUrl =
 		config.websocketUrl ??
 		(import.meta.env.VITE_YJS_WS_URL as string | undefined);
-	if (!websocketUrl) {
-		throw new Error("Missing websocketUrl for Yjs WebsocketProvider");
-	}
-	const wsProvider = new WebsocketProvider(websocketUrl, config.projectId, ydoc);
-	const awareness = wsProvider.awareness;
-	if (config.userId) {
-		awareness.setLocalStateField("userId", config.userId);
-	}
-	if (config.userName) {
-		awareness.setLocalStateField("userName", config.userName);
-	}
-	wsProvider.on("status", ({ status }: { status: string }) => {
-		if (status === "connected") {
-			config.onConnect?.();
-		} else if (status === "disconnected") {
-			config.onDisconnect?.();
+	const wsProvider = websocketUrl
+		? new WebsocketProvider(websocketUrl, config.projectId, ydoc)
+		: null;
+	const awareness = wsProvider?.awareness ?? null;
+	if (awareness) {
+		if (config.userId) {
+			awareness.setLocalStateField("userId", config.userId);
 		}
-	});
-	wsProvider.awareness.on("change", () => {
-		const states = wsProvider.awareness.getStates();
-		config.onAwarenessChange?.(states);
-	});
+		if (config.userName) {
+			awareness.setLocalStateField("userName", config.userName);
+		}
+		wsProvider?.on("status", ({ status }: { status: string }) => {
+			if (status === "connected") {
+				config.onConnect?.();
+			} else if (status === "disconnected") {
+				config.onDisconnect?.();
+			}
+		});
+		wsProvider?.awareness.on("change", () => {
+			const states = wsProvider?.awareness.getStates() ?? new Map();
+			config.onAwarenessChange?.(states);
+		});
+	}
 
 	// Set up update handlers
 	nodes.observe(() => {
@@ -95,7 +96,7 @@ export function createYjsClient(
 	// Initial state from IndexedDB if no WebSocket connection
 	if (nodes.length === 0 && edges.length === 0) {
 		setTimeout(() => {
-				if (!wsProvider.wsconnected && nodes.length === 0) {
+				if (!wsProvider?.wsconnected && nodes.length === 0) {
 				console.debug("No data from IndexedDB, starting fresh");
 			}
 		}, 500);
@@ -107,9 +108,9 @@ export function createYjsClient(
 		edges,
 		settings,
 		awareness,
-		connect: () => wsProvider.connect(),
-		disconnect: () => wsProvider.disconnect(),
-		isConnected: () => wsProvider.wsconnected,
+		connect: () => wsProvider?.connect(),
+		disconnect: () => wsProvider?.disconnect(),
+		isConnected: () => wsProvider?.wsconnected ?? false,
 		getState: () => ({
 			nodes: nodes.toArray() as AppNode[],
 			edges: edges.toArray() as Edge[],

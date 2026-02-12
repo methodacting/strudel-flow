@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { anonymous, organization } from "better-auth/plugins";
+import { organization } from "better-auth/plugins";
 
 import { db } from "../db";
 import * as schema from "@strudel-flow/db/schema";
@@ -9,15 +9,7 @@ import type { CloudflareBindings } from "../types/bindings";
 // Create a fresh auth instance for each request (required for Cloudflare Workers)
 export function getAuth(
 	d1: D1Database,
-	env: Pick<
-		CloudflareBindings,
-		| "BETTER_AUTH_URL"
-		| "GOOGLE_CLIENT_ID"
-		| "GOOGLE_CLIENT_SECRET"
-		| "GITHUB_CLIENT_ID"
-		| "GITHUB_CLIENT_SECRET"
-		| "FRONTEND_URL"
-	>,
+	env: CloudflareBindings,
 ): ReturnType<typeof betterAuth> {
 	const database = db(d1);
 	const baseOrigin = new URL(env.BETTER_AUTH_URL).origin;
@@ -52,15 +44,6 @@ export function getAuth(
 			},
 		},
 		plugins: [
-			anonymous({
-				generateName: () => `Guest ${Math.floor(Math.random() * 10000)}`,
-				onLinkAccount: async ({ anonymousUser, newUser }) => {
-					console.log("Anonymous account linked", {
-						anonymousUser,
-						newUser,
-					});
-				},
-			}),
 			organization(),
 		],
 		session: {

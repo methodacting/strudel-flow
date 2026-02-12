@@ -21,6 +21,8 @@ import RenameProjectDialog from "./rename-project-dialog";
 import DeleteProjectDialog from "./delete-project-dialog";
 import type { Project } from "@/types/project";
 import { indexedDB } from "@/lib/indexeddb";
+import { useSessionContext } from "@/contexts/session-context";
+import { getProjectScope } from "@/lib/project-scope";
 
 type SortOption = "name-asc" | "name-desc" | "newest" | "oldest" | "updated";
 
@@ -38,12 +40,14 @@ export interface ProjectListProps {
 	onCreate: () => void;
 	onSelect: (project: Project) => void;
 	sessionReady: boolean;
+	isAuthenticated: boolean;
 }
 
 export default function ProjectList({
 	onCreate,
 	onSelect,
 	sessionReady,
+	isAuthenticated,
 }: ProjectListProps) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [sortBy, setSortBy] = useState<SortOption>("updated");
@@ -53,12 +57,14 @@ export default function ProjectList({
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 	const [cachedProjects, setCachedProjects] = useState<Project[] | null>(null);
+	const { session } = useSessionContext();
+	const scope = getProjectScope(session?.user?.id ?? null);
 
 	useEffect(() => {
 		let mounted = true;
 
 		void (async () => {
-			const localProjects = await indexedDB.projects.getAll();
+			const localProjects = await indexedDB.projects.getAll(scope);
 			if (mounted) {
 				setCachedProjects(localProjects);
 			}
@@ -67,11 +73,11 @@ export default function ProjectList({
 		return () => {
 			mounted = false;
 		};
-	}, []);
+	}, [scope]);
 
 	// Load projects with TanStack Query
 	const { data: projects, isLoading, isFetching, error } =
-		useProjectsQuery(sessionReady);
+		useProjectsQuery(sessionReady, isAuthenticated, session?.user?.id);
 
 	useEffect(() => {
 		if (projects) {
@@ -79,13 +85,13 @@ export default function ProjectList({
 		}
 	}, [projects]);
 	// Update project mutation
-	const updateProject = useUpdateProjectMutation();
+	const updateProject = useUpdateProjectMutation(isAuthenticated, session?.user?.id);
 
 	// Delete project mutation
-	const deleteProject = useDeleteProjectMutation();
+	const deleteProject = useDeleteProjectMutation(isAuthenticated, session?.user?.id);
 
 	// Create project mutation
-	const createProject = useCreateProjectMutation();
+	const createProject = useCreateProjectMutation(isAuthenticated, session?.user?.id);
 
 	const projectsList = projects ?? cachedProjects ?? [];
 	const shouldShowSkeleton =

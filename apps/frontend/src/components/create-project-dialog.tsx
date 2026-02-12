@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useCreateProjectMutation } from "@/hooks/api/projects";
+import { useSessionContext } from "@/contexts/session-context";
 
 export interface CreateProjectDialogProps {
 	open: boolean;
@@ -26,8 +27,12 @@ export default function CreateProjectDialog({
 	const [creating, setCreating] = useState(false);
 	const [error, setError] = useState("");
 	const navigate = useNavigate();
+	const { session, isAuthenticated } = useSessionContext();
 
-	const createProject = useCreateProjectMutation();
+	const createProject = useCreateProjectMutation(
+		isAuthenticated,
+		session?.user?.id,
+	);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();

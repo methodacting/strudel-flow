@@ -11,6 +11,7 @@ export interface UseYjsSyncOptions {
 	userId?: string;
 	userName?: string;
 	isReadOnly?: boolean;
+	isAuthenticated?: boolean;
 }
 
 export interface UseYjsSyncResult {
@@ -23,7 +24,7 @@ export interface UseYjsSyncResult {
 }
 
 export function useYjsSync(options: UseYjsSyncOptions) {
-	const { projectId, token, userId, userName, isReadOnly } = options;
+	const { projectId, token, userId, userName, isReadOnly, isAuthenticated } = options;
 
 	const clientRef = useRef<YjsClient | null>(null);
 	const awarenessManagerRef = useRef<ReturnType<typeof createAwarenessManager> | null>(null);
@@ -31,7 +32,7 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 	const [remoteUsers, setRemoteUsers] = useState<AwarenessState[]>([]);
 	const { data: realtimeData } = useRealtimeUrlQuery(
 		projectId,
-		Boolean(projectId),
+		Boolean(projectId) && Boolean(isAuthenticated),
 	);
 	const websocketUrl = realtimeData?.wsUrl ?? null;
 
@@ -45,16 +46,15 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 		if (!projectId) return;
 
 		const setupClient = async () => {
-			if (!websocketUrl) {
+			if (isAuthenticated && !websocketUrl) {
 				return;
 			}
-
 			const client = createYjsClient({
 				projectId,
 				token,
 				userId,
 				userName,
-				websocketUrl,
+				websocketUrl: isAuthenticated ? websocketUrl ?? undefined : undefined,
 				onUpdate: (newNodes, newEdges) => {
 					syncToYjsRef.current = true;
 					setNodes(newNodes);
@@ -109,11 +109,12 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 		return () => {
 			cleanup?.();
 		};
-	}, [projectId, token, userId, userName, websocketUrl, setNodes, setEdges]);
+	}, [projectId, token, userId, userName, websocketUrl, setNodes, setEdges, isAuthenticated]);
 
 	// Sync Zustand changes to Yjs
 	useEffect(() => {
-		if (!clientRef.current || !clientRef.current.isConnected()) return;
+		if (!clientRef.current) return;
+		if (isAuthenticated && !clientRef.current.isConnected()) return;
 		if (isReadOnly) return;
 		if (syncToYjsRef.current) {
 			syncToYjsRef.current = false;

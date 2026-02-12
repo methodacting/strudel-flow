@@ -64,9 +64,11 @@ function CPMPanelButton({ onToggle }: { onToggle: () => void }) {
 export function WorkflowControls({
   projectId,
   awareness,
+  isAuthenticated,
 }: {
   projectId: string;
   awareness?: UseYjsSyncResult;
+  isAuthenticated: boolean;
 }) {
   const [isPatternPanelVisible, setPatternPanelVisible] = useState(false);
   const [isCpmPanelVisible, setCpmPanelVisible] = useState(false);
@@ -74,7 +76,7 @@ export function WorkflowControls({
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportResult, setExportResult] = useState<{
-    shareUrl: string;
+    shareUrl?: string;
     audioUrl: string;
     exportId: string;
   } | null>(null);
@@ -83,7 +85,7 @@ export function WorkflowControls({
 
   // Audio export hooks
   const { isRecording, startRecording, levels } = useAudioExport();
-  const createExport = useCreateExportMutation();
+  const createExport = useCreateExportMutation(isAuthenticated);
   const { isGloballyPaused } = useGlobalPlayback();
 
   // Debug: log pause state changes
@@ -118,6 +120,16 @@ export function WorkflowControls({
           console.debug(`Recording time remaining: ${remaining.toFixed(1)}s`);
         },
         onComplete: async (blob) => {
+          if (!isAuthenticated) {
+            const localUrl = URL.createObjectURL(blob);
+            setExportResult({
+              audioUrl: localUrl,
+              exportId: `local-${Date.now()}`,
+            });
+            setIsExporting(false);
+            return;
+          }
+
           // Upload the recorded audio to the backend
           const result = await createExport.mutateAsync({
             projectId,
@@ -148,17 +160,29 @@ export function WorkflowControls({
   };
 
   const handleResetExport = () => {
+    if (exportResult?.audioUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(exportResult.audioUrl);
+    }
     setExportResult(null);
     setExportError(null);
   };
 
   function ExportButton() {
+    const disabled = isExporting || isRecording;
     return (
       <button
         className="p-2 rounded bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground transition"
-        onClick={() => setExportDialogOpen(true)}
-        disabled={isExporting || isRecording}
-        title="Export audio"
+        onClick={() => {
+          if (!disabled) {
+            setExportDialogOpen(true);
+          }
+        }}
+        disabled={disabled}
+        title={
+          !isAuthenticated
+            ? "Export locally (sign in to share)"
+            : "Export audio"
+        }
       >
         <Download className="w-5 h-5" />
       </button>
@@ -229,6 +253,7 @@ export function WorkflowControls({
           exportError={exportError}
           isPaused={isGloballyPaused}
           levels={levels}
+          isAuthenticated={isAuthenticated}
         />
       </>
     );
@@ -281,6 +306,7 @@ export function WorkflowControls({
         exportError={exportError}
         isPaused={isGloballyPaused}
         levels={levels}
+        isAuthenticated={isAuthenticated}
       />
     </>
   );
