@@ -39,7 +39,8 @@
       "Bash(pnpm --filter @strudel-flow/backend build:*)",
       "mcp__docs__search_docs",
       "mcp__docs__list_libraries",
-      "Bash(pnpm --filter @strudel-flow/backend add:*)"
+      "Bash(pnpm --filter @strudel-flow/backend add:*)",
+      "Skill(commit-commands:commit)"
     ]
   },
   "disabledMcpjsonServers": [
