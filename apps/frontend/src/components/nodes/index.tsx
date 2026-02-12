@@ -31,9 +31,7 @@ import { JuxNode } from './effects/jux-node';
 import { PhaserNode } from './effects/phaser-node';
 import { PostGainNode } from './effects/postgain-node';
 import { CrushNode } from './effects/crush-node';
-import { SustainNode } from './effects/sustain-node';
-import { ReleaseNode } from './effects/release-node';
-import { AttackNode } from './effects/attack-node';
+import { ADSRNode } from './effects/adsr-node';
 import { FastNode } from './effects/fast-node';
 import { SlowNode } from './effects/slow-node';
 
@@ -90,6 +88,7 @@ export type WorkflowNodeData = {
   fast?: string;
   slow?: string;
   attack?: string;
+  decay?: string;
   release?: string;
   sustain?: string;
   crush?: string;
@@ -231,23 +230,11 @@ const nodesConfig: Record<AppNodeType, NodeConfig> = {
     icon: 'Rewind',
     category: 'Time Effects',
   },
-  'attack-node': {
-    id: 'attack-node',
-    title: 'Attack',
-    icon: 'Zap',
-    category: 'Time Effects',
-  },
-  'release-node': {
-    id: 'release-node',
-    title: 'Release',
-    icon: 'VolumeX',
-    category: 'Time Effects',
-  },
-  'sustain-node': {
-    id: 'sustain-node',
-    title: 'Sustain',
-    icon: 'Volume2',
-    category: 'Time Effects',
+  'adsr-node': {
+    id: 'adsr-node',
+    title: 'ADSR',
+    icon: 'ArrowDown',
+    category: 'Audio Effects',
   },
   'rev-node': {
     id: 'rev-node',
@@ -325,9 +312,7 @@ export const nodeTypes = {
   'room-node': RoomNode,
   'postgain-node': PostGainNode,
   'crush-node': CrushNode,
-  'sustain-node': SustainNode,
-  'release-node': ReleaseNode,
-  'attack-node': AttackNode,
+  'adsr-node': ADSRNode,
   'fast-node': FastNode,
   'slow-node': SlowNode,
   'mask-node': MaskNode,
@@ -382,9 +367,7 @@ export type AppNode =
   | Node<WorkflowNodeData, 'room-node'>
   | Node<WorkflowNodeData, 'postgain-node'>
   | Node<WorkflowNodeData, 'crush-node'>
-  | Node<WorkflowNodeData, 'sustain-node'>
-  | Node<WorkflowNodeData, 'release-node'>
-  | Node<WorkflowNodeData, 'attack-node'>
+  | Node<WorkflowNodeData, 'adsr-node'>
   | Node<WorkflowNodeData, 'fast-node'>
   | Node<WorkflowNodeData, 'slow-node'>
   | Node<WorkflowNodeData, 'drum-sounds-node'>
