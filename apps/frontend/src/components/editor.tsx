@@ -1,21 +1,25 @@
 import { useEffect } from "react";
-import { useYjsSync } from "@/hooks/use-yjs-sync";
 import { useAppStore } from "@/store/app-context";
-import { useSessionContext } from "@/contexts/session-context";
+import type { UseYjsSyncResult } from "@/hooks/use-yjs-sync";
+import { useGlobalPlayback } from "@/hooks/use-global-playback";
 import Workflow from "./workflow";
 
 type WorkflowEditorProps = {
 	projectId: string;
 	accessRole?: "owner" | "editor" | "viewer";
+	awareness?: UseYjsSyncResult;
+	isAuthenticated: boolean;
 };
 
 export default function WorkflowEditor({
 	projectId,
 	accessRole,
+	awareness,
+	isAuthenticated,
 }: WorkflowEditorProps) {
-	const isReadOnly = accessRole === "viewer";
-	const setIsReadOnly = useAppStore((state) => state.setIsReadOnly);
-	const { session, isAuthenticated } = useSessionContext();
+const isReadOnly = accessRole === "viewer";
+const setIsReadOnly = useAppStore((state) => state.setIsReadOnly);
+const { globalPause } = useGlobalPlayback();
 
 	useEffect(() => {
 		setIsReadOnly(isReadOnly);
@@ -24,20 +28,18 @@ export default function WorkflowEditor({
 		};
 	}, [isReadOnly, setIsReadOnly]);
 
-	const yjsSync = useYjsSync({
-		projectId,
-		isReadOnly,
-		isAuthenticated,
-		userId: session?.user?.id,
-		userName: session?.user?.name,
-	});
+	useEffect(() => {
+		return () => {
+			globalPause();
+		};
+	}, [projectId, globalPause]);
 
 	return (
 		<div className="w-full h-full">
 		<Workflow
 			projectId={projectId}
 			isReadOnly={isReadOnly}
-			awareness={yjsSync}
+			awareness={awareness}
 			isAuthenticated={isAuthenticated}
 		/>
 	</div>

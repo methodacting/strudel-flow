@@ -55,3 +55,5 @@ strudel/
 .env.local
 .env.*.local
 .mcp.json
+
+.lazyenv/

@@ -39,17 +39,30 @@ export default function UserMenu({ sessionReady }: { sessionReady: boolean }) {
 		return (
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
-					<Button variant="outline">Sign In</Button>
+					<Button variant="secondary" className="h-9 px-3">
+						Sign In
+					</Button>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" className="w-56">
-					<DropdownMenuLabel>Sign in to sync</DropdownMenuLabel>
+				<DropdownMenuContent align="end" className="w-64 p-2">
+					<DropdownMenuLabel className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+						Sign in to sync
+					</DropdownMenuLabel>
+					<div className="px-2 pb-1 text-xs text-muted-foreground">
+						Keep your projects and presence in sync.
+					</div>
 					<DropdownMenuSeparator />
-					<DropdownMenuItem onClick={signInWithGoogle}>
-						<UserPlus className="mr-2 h-4 w-4" />
+					<DropdownMenuItem
+						onClick={signInWithGoogle}
+						className="mt-1 flex h-10 items-center gap-2 rounded-md px-2 text-sm font-medium"
+					>
+						<UserPlus className="h-4 w-4 text-muted-foreground" />
 						Sign In with Google
 					</DropdownMenuItem>
-					<DropdownMenuItem onClick={signInWithGithub}>
-						<Github className="mr-2 h-4 w-4" />
+					<DropdownMenuItem
+						onClick={signInWithGithub}
+						className="flex h-10 items-center gap-2 rounded-md px-2 text-sm font-medium"
+					>
+						<Github className="h-4 w-4 text-muted-foreground" />
 						Sign In with GitHub
 					</DropdownMenuItem>
 				</DropdownMenuContent>

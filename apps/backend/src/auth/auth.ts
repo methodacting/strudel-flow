@@ -10,9 +10,15 @@ import type { CloudflareBindings } from "../types/bindings";
 export function getAuth(
 	d1: D1Database,
 	env: CloudflareBindings,
+	requestUrl?: string,
 ): ReturnType<typeof betterAuth> {
 	const database = db(d1);
-	const baseOrigin = new URL(env.BETTER_AUTH_URL).origin;
+	const resolvedBaseUrl =
+		env.BETTER_AUTH_URL ?? (requestUrl ? new URL(requestUrl).origin : undefined);
+	if (!resolvedBaseUrl) {
+		throw new Error("Missing BETTER_AUTH_URL and request URL for auth base URL.");
+	}
+	const baseOrigin = new URL(resolvedBaseUrl).origin;
 	const trustedOrigins = [
 		"http://localhost:5173",
 		"http://127.0.0.1:5173",
@@ -23,7 +29,7 @@ export function getAuth(
 	}
 
 	return betterAuth({
-		baseURL: env.BETTER_AUTH_URL,
+		baseURL: resolvedBaseUrl,
 		basePath: "/auth",
 		trustedOrigins,
 		database: drizzleAdapter(database, {

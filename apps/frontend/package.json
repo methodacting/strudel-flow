@@ -50,6 +50,7 @@
     "zustand": "^5.0.1"
   },
   "devDependencies": {
+    "@react-grab/mcp": "^0.1.14",
     "@tailwindcss/vite": "^4.1.10",
     "@tanstack/react-query-devtools": "^5.91.2",
     "@types/node": "^24.0.1",
@@ -62,6 +63,7 @@
     "eslint": "^8.56.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "react-grab": "^0.1.14",
     "tw-animate-css": "^1.3.4",
     "typescript": "^5.8.3",
     "vite": "^5.0.12"

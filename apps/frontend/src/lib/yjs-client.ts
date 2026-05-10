@@ -16,6 +16,7 @@ export interface YjsClientConfig {
 	onAwarenessChange?: (states: Map<number, unknown>) => void;
 	onConnect?: () => void;
 	onDisconnect?: () => void;
+	onIndexeddbSynced?: () => void;
 }
 
 export interface YjsClient {
@@ -52,6 +53,7 @@ export function createYjsClient(
 
 		indexedDBProvider.on("synced", () => {
 			console.debug("Yjs state synced to IndexedDB");
+			config.onIndexeddbSynced?.();
 		});
 	}
 

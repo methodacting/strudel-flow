@@ -21,6 +21,7 @@ export type AppState = {
   edges: Edge[];
   colorMode: ColorMode;
   theme: string;
+  activeProjectId?: string | null;
   draggedNodes: Map<string, AppNode>;
   connectionSites: Map<string, PotentialConnection>;
   isGloballyPaused: boolean;
@@ -63,6 +64,8 @@ export type AppActions = {
   onNodeDragStop: OnNodeDrag<AppNode>;
   setIsGloballyPaused: (paused: boolean) => void;
   setIsReadOnly: (readOnly: boolean) => void;
+  setActiveProjectId: (projectId: string | null) => void;
+  setProjectState: (projectId: string | null, nodes: AppNode[], edges: Edge[]) => void;
 };
 
 export type AppStore = AppState & AppActions;
@@ -76,6 +79,7 @@ export const defaultState: AppState = {
   connectionSites: new Map(),
   isGloballyPaused: false,
   isReadOnly: false,
+  activeProjectId: null,
 };
 
 export const createAppStore = (initialState: AppState = defaultState) => {
@@ -92,6 +96,13 @@ export const createAppStore = (initialState: AppState = defaultState) => {
       },
 
       setNodes: (nodes) => set({ nodes }),
+
+      setProjectState: (projectId, nodes, edges) => {
+        if (get().activeProjectId !== projectId) {
+          return;
+        }
+        set({ nodes, edges });
+      },
 
       addNode: (node) => {
         if (get().isReadOnly) {
@@ -202,6 +213,12 @@ export const createAppStore = (initialState: AppState = defaultState) => {
       },
       setIsGloballyPaused: (paused) => set({ isGloballyPaused: paused }),
       setIsReadOnly: (readOnly) => set({ isReadOnly: readOnly }),
+      setActiveProjectId: (projectId) =>
+        set((state) => ({
+          activeProjectId: projectId,
+          nodes: projectId ? [] : state.nodes,
+          edges: projectId ? [] : state.edges,
+        })),
     }))
   );
 

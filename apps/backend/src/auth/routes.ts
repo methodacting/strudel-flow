@@ -9,7 +9,7 @@ export const authRouter = new Hono<{ Bindings: AppBindings }>().all(
 		console.log("[auth] origin:", c.req.header("origin"));
 		console.log("[auth] request cookie:", c.req.header("cookie"));
 		const request = new Request(c.req.raw);
-		const auth = getAuth(c.env.DB, c.env);
+		const auth = getAuth(c.env.DB, c.env, c.req.url);
 		const response = await auth.handler(request);
 		console.log("[auth] response status:", response.status);
 

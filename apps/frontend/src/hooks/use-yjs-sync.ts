@@ -16,6 +16,7 @@ export interface UseYjsSyncOptions {
 
 export interface UseYjsSyncResult {
 	isConnected: boolean;
+	isSyncing: boolean;
 	updateCursor: (x: number, y: number) => void;
 	updateSelection: (nodeId: string) => void;
 	clearSelection: () => void;
@@ -29,7 +30,12 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 	const clientRef = useRef<YjsClient | null>(null);
 	const awarenessManagerRef = useRef<ReturnType<typeof createAwarenessManager> | null>(null);
 	const syncToYjsRef = useRef(false);
+	const hasInitialSyncRef = useRef(false);
+	const lastProjectIdRef = useRef<string | null>(null);
+	const activeProjectIdRef = useRef<string | null>(null);
+	const clientProjectIdRef = useRef<string | null>(null);
 	const [remoteUsers, setRemoteUsers] = useState<AwarenessState[]>([]);
+	const [isSyncing, setIsSyncing] = useState(true);
 	const { data: realtimeData } = useRealtimeUrlQuery(
 		projectId,
 		Boolean(projectId) && Boolean(isAuthenticated),
@@ -38,8 +44,31 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 
 	const nodes = useAppStore((state) => state.nodes);
 	const edges = useAppStore((state) => state.edges);
-	const setNodes = useAppStore((state) => state.setNodes);
-	const setEdges = useAppStore((state) => state.setEdges);
+	const setProjectState = useAppStore((state) => state.setProjectState);
+	const setActiveProjectId = useAppStore((state) => state.setActiveProjectId);
+
+	useEffect(() => {
+		if (!projectId) {
+			setActiveProjectId(null);
+			return;
+		}
+		setActiveProjectId(projectId);
+		activeProjectIdRef.current = projectId;
+		const isProjectChange =
+			lastProjectIdRef.current !== null && lastProjectIdRef.current !== projectId;
+		lastProjectIdRef.current = projectId;
+		hasInitialSyncRef.current = false;
+		setIsSyncing(true);
+		if (isProjectChange) {
+			setProjectState(projectId, [], []);
+			// Prevent pushing previous project's nodes into the new doc.
+			syncToYjsRef.current = true;
+		}
+		return () => {
+			activeProjectIdRef.current = null;
+			setActiveProjectId(null);
+		};
+	}, [projectId, setProjectState, setActiveProjectId]);
 
 	// Create Yjs client
 	useEffect(() => {
@@ -49,16 +78,32 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 			if (isAuthenticated && !websocketUrl) {
 				return;
 			}
+			const clientProjectId = projectId;
 			const client = createYjsClient({
 				projectId,
 				token,
 				userId,
 				userName,
 				websocketUrl: isAuthenticated ? websocketUrl ?? undefined : undefined,
+				onIndexeddbSynced: () => {
+					if (activeProjectIdRef.current !== clientProjectId) {
+						return;
+					}
+					if (!hasInitialSyncRef.current) {
+						hasInitialSyncRef.current = true;
+					}
+					setIsSyncing(false);
+				},
 				onUpdate: (newNodes, newEdges) => {
+					if (activeProjectIdRef.current !== clientProjectId) {
+						return;
+					}
+					if (!hasInitialSyncRef.current) {
+						hasInitialSyncRef.current = true;
+					}
+					setIsSyncing(false);
 					syncToYjsRef.current = true;
-					setNodes(newNodes);
-					setEdges(newEdges);
+					setProjectState(projectId, newNodes, newEdges);
 				},
 				onAwarenessChange: (states) => {
 					console.debug("Awareness changed:", states);
@@ -72,6 +117,7 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 			});
 
 			clientRef.current = client;
+			clientProjectIdRef.current = clientProjectId;
 
 			// Set up awareness manager
 			if (client.ydoc) {
@@ -92,6 +138,9 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 						unsubscribe();
 						client.disconnect();
 						awarenessManagerRef.current?.dispose();
+						clientRef.current = null;
+						clientProjectIdRef.current = null;
+						awarenessManagerRef.current = null;
 					};
 				}
 			}
@@ -109,11 +158,13 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 		return () => {
 			cleanup?.();
 		};
-	}, [projectId, token, userId, userName, websocketUrl, setNodes, setEdges, isAuthenticated]);
+	}, [projectId, token, userId, userName, websocketUrl, isAuthenticated, setProjectState, setActiveProjectId]);
 
 	// Sync Zustand changes to Yjs
 	useEffect(() => {
 		if (!clientRef.current) return;
+		if (clientProjectIdRef.current !== projectId) return;
+		if (!hasInitialSyncRef.current) return;
 		if (isAuthenticated && !clientRef.current.isConnected()) return;
 		if (isReadOnly) return;
 		if (syncToYjsRef.current) {
@@ -122,7 +173,7 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 		}
 
 		clientRef.current.setState(nodes, edges);
-	}, [edges, isAuthenticated, isReadOnly, nodes]);
+	}, [edges, isAuthenticated, isReadOnly, nodes, projectId]);
 
 	// Expose awareness manager
 	const updateCursor = useCallback((x: number, y: number) => {
@@ -143,6 +194,7 @@ export function useYjsSync(options: UseYjsSyncOptions) {
 
 	return {
 		isConnected: clientRef.current?.isConnected() || false,
+		isSyncing,
 		updateCursor,
 		updateSelection,
 		clearSelection,
