@@ -6,6 +6,12 @@ import { db } from "../db";
 import * as schema from "@strudel-flow/db/schema";
 import type { CloudflareBindings } from "../types/bindings";
 
+const splitOrigins = (value?: string) =>
+	value
+		?.split(",")
+		.map((origin) => origin.trim())
+		.filter(Boolean) ?? [];
+
 // Create a fresh auth instance for each request (required for Cloudflare Workers)
 export function getAuth(
 	d1: D1Database,
@@ -19,19 +25,21 @@ export function getAuth(
 		throw new Error("Missing BETTER_AUTH_URL and request URL for auth base URL.");
 	}
 	const baseOrigin = new URL(resolvedBaseUrl).origin;
+	const isSecureOrigin = new URL(resolvedBaseUrl).protocol === "https:";
 	const trustedOrigins = [
-		"http://localhost:5173",
-		"http://127.0.0.1:5173",
 		baseOrigin,
+		"https://frontend.strudel-flow.localhost",
+		"https://backend.strudel-flow.localhost",
 	];
 	if (env.FRONTEND_URL) {
 		trustedOrigins.push(env.FRONTEND_URL);
 	}
+	trustedOrigins.push(...splitOrigins(env.BETTER_AUTH_TRUSTED_ORIGINS));
 
 	return betterAuth({
 		baseURL: resolvedBaseUrl,
 		basePath: "/auth",
-		trustedOrigins,
+		trustedOrigins: Array.from(new Set(trustedOrigins)),
 		database: drizzleAdapter(database, {
 			provider: "sqlite",
 			schema,
@@ -40,12 +48,6 @@ export function getAuth(
 			google: {
 				clientId: env.GOOGLE_CLIENT_ID || "",
 				clientSecret: env.GOOGLE_CLIENT_SECRET || "",
-				enabled: true,
-			},
-			github: {
-				clientId: env.GITHUB_CLIENT_ID || "",
-				clientSecret: env.GITHUB_CLIENT_SECRET || "",
-				scope: ["user:email"],
 				enabled: true,
 			},
 		},
@@ -62,7 +64,7 @@ export function getAuth(
 		},
 		account: {
 			accountLinking: {
-				trustedProviders: ["google", "github"],
+				trustedProviders: ["google"],
 			},
 		},
 		advanced: {
@@ -72,19 +74,14 @@ export function getAuth(
 					name: "better-auth.session_token",
 					attributes: {
 						httpOnly: true,
-						// For local development with different ports, use none to allow cross-port cookies
-						// Note: SameSite=none requires Secure=true, but for local http we can't use it
-						// So we rely on the fact that same-registrable-domain (localhost) treats different ports as same-site
 						sameSite: "lax",
-						// Don't set secure for local development
-						secure: false,
+						secure: isSecureOrigin,
 						path: "/",
-						// Explicitly don't set domain for localhost
 						domain: undefined,
 					},
 				},
 			},
-			useSecureCookies: false, // Disable for local development
+			useSecureCookies: isSecureOrigin,
 		},
 	});
 }

@@ -1,4 +1,4 @@
-import { signInWithGoogle, signInWithGithub, signOut } from "@/lib/auth";
+import { signInWithGoogle, signOut } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -17,7 +17,6 @@ import {
 	UserPlus,
 	Settings2,
 	LogOut,
-	Github,
 } from "lucide-react";
 import { useSessionContext } from "@/contexts/session-context";
 
@@ -57,13 +56,6 @@ export default function UserMenu({ sessionReady }: { sessionReady: boolean }) {
 					>
 						<UserPlus className="h-4 w-4 text-muted-foreground" />
 						Sign In with Google
-					</DropdownMenuItem>
-					<DropdownMenuItem
-						onClick={signInWithGithub}
-						className="flex h-10 items-center gap-2 rounded-md px-2 text-sm font-medium"
-					>
-						<Github className="h-4 w-4 text-muted-foreground" />
-						Sign In with GitHub
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>

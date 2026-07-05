@@ -1,0 +1,4 @@
+{
+  "name": "backend.strudel-flow",
+  "script": "dev:app"
+}

@@ -20,12 +20,14 @@ export default defineConfig(() => ({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8788',
+        target: process.env.VITE_BACKEND_URL || 'https://backend.strudel-flow.localhost',
         changeOrigin: true,
+        secure: false,
       },
       '/auth': {
-        target: 'http://localhost:8788',
+        target: process.env.VITE_BACKEND_URL || 'https://backend.strudel-flow.localhost',
         changeOrigin: true,
+        secure: false,
       },
     },
   },

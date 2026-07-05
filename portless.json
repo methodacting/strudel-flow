@@ -1,0 +1,12 @@
+{
+  "apps": {
+    "apps/backend": {
+      "name": "backend.strudel-flow",
+      "script": "dev:app"
+    },
+    "apps/frontend": {
+      "name": "frontend.strudel-flow",
+      "script": "dev:app"
+    }
+  }
+}

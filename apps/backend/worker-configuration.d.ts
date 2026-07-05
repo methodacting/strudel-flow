@@ -7,13 +7,13 @@ declare namespace Cloudflare {
 		durableNamespaces: "YDurableObjects";
 	}
 	interface Env {
-		BETTER_AUTH_SECRET: "dev-secret-change-in-production";
-		BETTER_AUTH_URL: "https://strudel.method.actor";
-		FRONTEND_URL: "";
-		GOOGLE_CLIENT_ID: "your-google-client-id";
-		GOOGLE_CLIENT_SECRET: "your-google-client-secret";
-		GITHUB_CLIENT_ID: "your-github-client-id";
-		GITHUB_CLIENT_SECRET: "your-github-client-secret";
+		NODE_ENV: string;
+		BETTER_AUTH_SECRET: string;
+		BETTER_AUTH_URL: string;
+		FRONTEND_URL: string;
+		BETTER_AUTH_TRUSTED_ORIGINS: string;
+		GOOGLE_CLIENT_ID: string;
+		GOOGLE_CLIENT_SECRET: string;
 		Y_DURABLE_OBJECTS: DurableObjectNamespace<import("./src/index").YDurableObjects>;
 		AUDIO_EXPORTS: R2Bucket;
 		DB: D1Database;
@@ -25,7 +25,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "BETTER_AUTH_SECRET" | "BETTER_AUTH_URL" | "FRONTEND_URL" | "GOOGLE_CLIENT_ID" | "GOOGLE_CLIENT_SECRET" | "GITHUB_CLIENT_ID" | "GITHUB_CLIENT_SECRET">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "NODE_ENV" | "BETTER_AUTH_SECRET" | "BETTER_AUTH_URL" | "FRONTEND_URL" | "BETTER_AUTH_TRUSTED_ORIGINS" | "GOOGLE_CLIENT_ID" | "GOOGLE_CLIENT_SECRET">> {}
 }
 
 // Begin runtime types

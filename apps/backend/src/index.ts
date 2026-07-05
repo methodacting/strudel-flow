@@ -10,8 +10,8 @@ import { publicProjectRouter } from "./routes/public-projects";
 import type { AppBindings, AppVariables } from "./types/hono";
 
 const allowedOrigins = [
-	"http://localhost:5173",
-	"http://127.0.0.1:5173",
+	"https://frontend.strudel-flow.localhost",
+	"https://backend.strudel-flow.localhost",
 	"https://xyflow.com",
 	"https://app.xyflow.com",
 	"https://strudel.method.actor",

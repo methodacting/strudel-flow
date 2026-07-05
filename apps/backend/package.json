@@ -13,7 +13,8 @@
     }
   },
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "portless",
+    "dev:app": "wrangler dev --config wrangler.jsonc --env development --port ${PORT:-8787}",
     "deploy": "wrangler deploy --minify",
     "build": "tsc -p tsconfig.build.json",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
@@ -43,6 +44,6 @@
     "@cloudflare/workers-types": "^4.20260109.0",
     "drizzle-kit": "^0.31.8",
     "typescript": "^5.8.3",
-    "wrangler": "^4.58.0"
+    "wrangler": "^4.92.0"
   }
 }

@@ -68,17 +68,46 @@
       "custom_domain": true
     }
   ],
-  /*
   "vars": {
-    "BETTER_AUTH_SECRET": "dev-secret-change-in-production",
+    "NODE_ENV": "production",
     "BETTER_AUTH_URL": "https://strudel.method.actor",
     "FRONTEND_URL": "https://strudel.method.actor",
-    "GOOGLE_CLIENT_ID": "your-google-client-id",
-    "GOOGLE_CLIENT_SECRET": "your-google-client-secret",
-    "GITHUB_CLIENT_ID": "your-github-client-id",
-    "GITHUB_CLIENT_SECRET": "your-github-client-secret"
+    "BETTER_AUTH_TRUSTED_ORIGINS": "https://strudel.method.actor",
+    "GOOGLE_CLIENT_ID": "replace-with-google-client-id"
   },
-  */
+  "env": {
+    "development": {
+      "vars": {
+        "NODE_ENV": "development",
+        "BETTER_AUTH_URL": "https://backend.strudel-flow.localhost",
+        "FRONTEND_URL": "https://frontend.strudel-flow.localhost",
+        "BETTER_AUTH_TRUSTED_ORIGINS": "https://frontend.strudel-flow.localhost",
+        "GOOGLE_CLIENT_ID": "replace-with-google-client-id"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "strudel-flow-db",
+          "migrations_dir": "./migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "AUDIO_EXPORTS",
+          "bucket_name": "strudel-flow-audio-exports",
+          "preview_bucket_name": "strudel-flow-audio-exports-preview"
+        }
+      ],
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "Y_DURABLE_OBJECTS",
+            "class_name": "YDurableObjectsV2"
+          }
+        ]
+      }
+    }
+  },
   "dev": {
     "port": 8788
   }

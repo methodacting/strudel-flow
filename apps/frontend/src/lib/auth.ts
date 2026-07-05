@@ -17,10 +17,6 @@ export const signInWithGoogle = () => {
   return client.signIn.social({ provider: "google" });
 };
 
-export const signInWithGithub = () => {
-  return client.signIn.social({ provider: "github" });
-};
-
 export const signOut = () => {
   return client.signOut();
 };

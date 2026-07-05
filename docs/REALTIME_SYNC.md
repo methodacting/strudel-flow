@@ -24,11 +24,17 @@
 
 ### 1. Backend Setup
 
-Create `apps/backend/.dev.vars`:
+Set non-secret URL config in `apps/backend/wrangler.jsonc`. The development
+Wrangler env uses:
+
+```
+BETTER_AUTH_URL=https://backend.strudel-flow.localhost
+FRONTEND_URL=https://frontend.strudel-flow.localhost
+```
+
+Create `apps/backend/.dev.vars` with secrets:
 ```
 BETTER_AUTH_SECRET=dev-secret-key-change-in-production
-BETTER_AUTH_URL=http://localhost:8787
-GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 ```
 
@@ -40,9 +46,9 @@ pnpm dev
 
 ### 2. Frontend Setup
 
-Create `apps/frontend/.env`:
+Create `apps/frontend/.env.local`:
 ```
-VITE_BACKEND_URL=http://localhost:8787
+VITE_BACKEND_URL=https://backend.strudel-flow.localhost
 ```
 
 Start frontend:
@@ -55,7 +61,7 @@ pnpm dev
 1. **User Authentication**
    - Click "Sign In" in user menu
    - Authenticate with Google OAuth
-   - Session stored in localStorage
+   - Session stored by Better Auth cookies
 
 2. **Create Project**
    - Click "Create Project" button
@@ -109,4 +115,3 @@ pnpm dev
 4. **Add Presence UI**: Show other users' cursors
 5. **Error Handling**: Better error messages and retry logic
 6. **Deployment**: Set up production environment
-
